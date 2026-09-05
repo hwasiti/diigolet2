@@ -9,3 +9,4 @@ extension/harness/login.mjs
 extension/harness/*.png
 extension/harness/cookies.txt
 extension/harness/results/
+extension/harness/login-connect.mjs
