@@ -1,0 +1,25 @@
+10:06:38 login cookie: {"domain":".diigo.com","user":"hayder78","session":false}
+10:06:38 worker GlobalData right after start: {"signedIn":true,"user":"hayder78"}
+10:06:38 TEST 1: open page, wait 3 s, press Ctrl+Alt+A, then send the popup-style run command
+10:06:41 T1 GlobalData after 3 s: {"signedIn":true,"user":"hayder78"}
+10:06:44 T1 after shortcut: {"panelVisible":false,"highlights":0,"texts":[]} {"ready":false,"started":false,"signedIn":"n/a"}
+10:06:44 T1 run command -> "no reply (The message port closed before a response was received.)"
+10:06:48 T1 after run command: {"panelVisible":true,"highlights":0,"texts":[]} {"ready":true,"started":true,"signedIn":"n/a"}
+10:06:48 T1 page errors/dialogs: []
+10:06:48 TEST 2: open page, restart the worker, then act immediately
+10:06:51 T2 worker stopped: true
+10:06:51 T2 GlobalData in the fresh worker: "GlobalData not initialised yet"
+10:06:51 T2 run command -> "no reply (The message port closed before a response was received.)"
+10:06:55 T2 after run command: {"panelVisible":true,"highlights":0,"texts":[]} {"ready":true,"started":true,"signedIn":"n/a"}
+10:06:55 T2 GlobalData 4 s later: {"signedIn":true,"user":"hayder78"}
+10:06:55 T2 page errors/dialogs: ["[console.error] Unchecked runtime.lastError: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received"]
+10:06:55 TEST 3: restart the worker, then ask initialData from the content-script world
+10:06:58 T3 worker stopped: true
+10:06:58 T3 first reply: {"ms":35,"reply":"undefined","lastError":"Could not establish connection. Receiving end does not exist."}
+10:06:58 T3 second reply: {"ms":4,"reply":{"user":"","signedIn":false}}
+10:07:00 T3 reply 2 s later: {"ms":3,"reply":{"user":"hayder78","signedIn":true}}
+10:07:00 TEST 4: auto-show with a live worker (page with existing highlights)
+10:07:09 T4 live worker: {"panelVisible":true,"highlights":1,"texts":[]}
+10:07:09 TEST 4b: auto-show right after a worker restart
+10:07:17 T4b fresh worker: {"panelVisible":true,"highlights":1,"texts":[]}
+10:07:17 T4b page errors: []

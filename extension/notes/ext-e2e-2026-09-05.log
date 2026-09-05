@@ -1,0 +1,20 @@
+10:11:47 PASS test profile is signed in to Diigo hayder78
+10:11:50 PASS content script answers and auto-loaded {"version":"0.1.0","loaded":true,"shown":true,"pen":false,"count":0,"user":"hayder78","signedIn":true,"url":"https://developer.mozilla.org/en-US/docs/Web/API/Range"}
+10:11:50 Diigo before: {"user":"hayder78","saved":true,"anns":[]}
+10:11:54 PASS highlight saved (count 1) {"version":"0.1.0","loaded":true,"shown":true,"pen":false,"count":1,"user":"hayder78","signedIn":true,"url":"https://developer.mozilla.org/en-US/docs/Web/API/Range"}
+10:11:54 PASS one range painted 
+10:11:54 PASS Diigo stores the highlight {"id":"c0ee24437aad2272daa82906dc8d1029","content":"A range can be created by using the Document.createRange() method. Range objects can also be retrieved by using the getRangeAt() method of the Selec
+10:11:54 PASS stored content matches the selection A range can be created by using the Document.createRange() method. Range objects | A range can be created by using the Document.createRange() method. Range objects
+10:11:56 PASS popup shows the user and the count Diigolet 2 v0.1.0 Signed in to Diigo as hayder78 Sign out Open my library 1 highlight on this page Highlight selection Hide highlights Pen: off Reload Alt+Shift
+10:11:59 PASS after reload: loaded with count 1 {"version":"0.1.0","loaded":true,"shown":true,"pen":false,"count":1,"user":"hayder78","signedIn":true,"url":"https://developer.mozilla.org/en-US/docs/Web/API/Range"}
+10:11:59 PASS after reload: painted 
+10:12:00 PASS worker stopped 
+10:12:01 PASS after worker restart: toggle hides 
+10:12:01 PASS after worker restart: toggle shows 
+10:12:01 PASS after worker restart: auth known and signed in {"signedIn":true,"stale":false,"user":"hayder78"}
+10:12:06 PASS removed (count 0) {"version":"0.1.0","loaded":true,"shown":true,"pen":false,"count":0,"user":"hayder78","signedIn":true,"url":"https://developer.mozilla.org/en-US/docs/Web/API/Range"}
+10:12:06 PASS nothing painted 
+10:12:06 PASS Diigo no longer has it 
+10:12:06 PASS no page errors []
+10:12:06 worker log: (quiet)
+10:12:06 ALL PASSED

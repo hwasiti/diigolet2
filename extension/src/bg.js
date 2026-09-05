@@ -108,8 +108,10 @@ async function loadPage(tabId, st) {
   }
   st.count = anns.length;
   st.homes = Object.fromEntries(anns.filter((x) => x.url !== st.url).map((x) => [x.a.id, { url: x.url, urlId: x.urlId }]));
-  await savePage(tabId, st);
-  badge(tabId, anns.length ? anns.length : '');
+  // The tab may have navigated while Diigo answered: a late reply must not become the new page's state.
+  let current = null;
+  try { current = canonicalUrl((await chrome.tabs.get(tabId)).url || ''); } catch { /* tab gone */ }
+  if (current === st.url) { await savePage(tabId, st); badge(tabId, anns.length ? anns.length : ''); }
   return {
     user: resp.user, saved: st.saved,
     anns: anns.map(({ a }) => ({ id: a.id, content: a.content, nth: (a.extra && a.extra.nth) || 1, color: (a.extra && a.extra.color) || 'yellow', user: a.user || null, mine: !a.user || a.user === resp.user })),

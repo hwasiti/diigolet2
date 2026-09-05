@@ -143,12 +143,14 @@ import { nthAtRangeEnd } from './lib/anchor.js';
     d.nth = nthAtRangeEnd(r, S, d.txt);
     const rect = r.getBoundingClientRect();
     const a = { color, range: r.cloneRange(), txt: d.txt, nth: d.nth, content: d.content, mine: true };
+    const at = pageKey();
     paint(a);
     getSelection().removeAllRanges();
     state.prefs.color = color;
     call({ t: 'set-prefs', prefs: { color } }).catch(() => {});
     try {
       const { id } = await call({ t: 'add', url: location.href, title: document.title, content: d.content, nth: d.nth, color, top: rect.top + scrollY, left: rect.left + scrollX });
+      if (pageKey() !== at || !state.signedIn) { unpaint(a); return; } // the page moved on (or the user signed out) while saving
       a.id = id; anns.set(id, a); state.loaded = true;
       toast('Saved to Diigo', 'ok');
     } catch (e) { unpaint(a); fail(e); }

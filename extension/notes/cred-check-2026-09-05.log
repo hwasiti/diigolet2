@@ -1,0 +1,22 @@
+{
+ "www default credentials": {
+  "status": 200,
+  "user": "hayder78"
+ },
+ "www credentials:include": {
+  "status": 200,
+  "user": "hayder78"
+ },
+ "www credentials:omit": {
+  "status": 200,
+  "user": null
+ },
+ "toolbar3 default credentials": {
+  "status": 200,
+  "user": "hayder78"
+ },
+ "toolbar3 credentials:include": {
+  "status": 200,
+  "user": "hayder78"
+ }
+}
