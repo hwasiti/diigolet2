@@ -4,6 +4,7 @@
 // (src/bookmarklet/text.js: whitespace-free body text, `content` + `nth` anchoring).
 import { snapshot, describeRange, seek, toRange, stripWs, html2txt, occurrences } from '../../src/bookmarklet/text.js';
 import { isHighlightablePage } from './lib/auth.js';
+import { nthAtRangeEnd } from './lib/anchor.js';
 
 (() => {
   if (window.top !== window || !isHighlightablePage(location.href) || window.__dl2ext) return;
@@ -135,6 +136,7 @@ import { isHighlightablePage } from './lib/auth.js';
     const S = snapshot();
     const d = describeRange(r, S);
     if (!d.txt) return;
+    d.nth = nthAtRangeEnd(r, S, d.txt);
     if (d.txt.length > MAX_CHARS) return toast(`Too long: Diigo allows up to ${MAX_CHARS} characters per highlight`, 'err');
     const rect = r.getBoundingClientRect();
     const a = { color, range: r.cloneRange(), txt: d.txt, nth: d.nth, content: d.content, mine: true };
