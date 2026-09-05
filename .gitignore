@@ -7,3 +7,5 @@ extension/harness/profile*/
 extension/harness/ext-official/
 extension/harness/login.mjs
 extension/harness/*.png
+extension/harness/cookies.txt
+extension/harness/results/

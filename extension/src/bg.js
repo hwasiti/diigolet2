@@ -101,19 +101,22 @@ async function loadPage(tabId, st) {
   st.saved = !!resp.result.saved;
   st.known = true;
   if (resp.result.bookmarkInfo && resp.result.bookmarkInfo.title) st.title = resp.result.bookmarkInfo.title;
-  const anns = (resp.result.annotations || []).filter((a) => a.type === 0);
+  // Highlights the official client stored under the exact URL (tracking parameters and all) are shown too; each
+  // remembers which bookmark it belongs to, because deleting needs that bookmark's urlId.
+  const anns = (resp.result.annotations || []).filter((a) => a.type === 0).map((a) => ({ a, url: st.url, urlId: st.urlId }));
   if (st.exact !== st.url) {
     try {
       const r2 = await api.load(st.exact, auth.user);
-      if (r2.code === 1 && r2.result) for (const a of r2.result.annotations || []) if (a.type === 0 && !anns.some((x) => x.id === a.id)) anns.push(a);
+      if (r2.code === 1 && r2.result) for (const a of r2.result.annotations || []) if (a.type === 0 && !anns.some((x) => x.a.id === a.id)) anns.push({ a, url: st.exact, urlId: r2.result.urlId });
     } catch { /* best effort */ }
   }
   st.count = anns.length;
+  st.homes = Object.fromEntries(anns.filter((x) => x.url !== st.url).map((x) => [x.a.id, { url: x.url, urlId: x.urlId }]));
   await savePage(tabId, st);
   badge(tabId, anns.length ? anns.length : '');
   return {
     user: resp.user, saved: st.saved,
-    anns: anns.map((a) => ({ id: a.id, content: a.content, nth: (a.extra && a.extra.nth) || 1, color: (a.extra && a.extra.color) || 'yellow', user: a.user || null, mine: !a.user || a.user === resp.user })),
+    anns: anns.map(({ a }) => ({ id: a.id, content: a.content, nth: (a.extra && a.extra.nth) || 1, color: (a.extra && a.extra.color) || 'yellow', user: a.user || null, mine: !a.user || a.user === resp.user })),
   };
 }
 
@@ -140,14 +143,19 @@ async function addHighlight(tabId, st, m) {
 async function deleteHighlight(tabId, st, id) {
   if (!st.known) await loadPage(tabId, st);
   const auth = await getAuth();
-  const resp = await api.del(st.urlId, id, auth.user);
+  const home = (st.homes && st.homes[id]) || { url: st.url, urlId: st.urlId };
+  const resp = await api.del(home.urlId, id, auth.user);
+  if (resp.user === null) { await markStale(); throw new DiigoError('signin', 'Sign in to Diigo'); }
   if (resp.code !== 1) throw new DiigoError('refused', 'Diigo refused to remove the highlight');
-  // Diigo answers "success" to deletes it does not perform on some bookmarks: check.
+  // Diigo answers "success" to deletes it does not perform on some bookmarks: check against the same bookmark.
   await wait(1200);
-  const check = await api.load(st.url, auth.user);
-  const kept = !!(check.result && (check.result.annotations || []).some((x) => x.id === id));
-  if (!kept) { st.count = Math.max(0, st.count - 1); await savePage(tabId, st); badge(tabId, st.count || ''); }
-  return { kept };
+  let kept = null; // null: could not verify
+  try {
+    const check = await api.load(home.url, auth.user);
+    if (check.code === 1 && check.result) kept = (check.result.annotations || []).some((x) => x.id === id);
+  } catch { /* verification failed; reported as unverified */ }
+  if (kept === false) { st.count = Math.max(0, st.count - 1); if (st.homes) delete st.homes[id]; await savePage(tabId, st); badge(tabId, st.count || ''); }
+  return { kept, verified: kept !== null };
 }
 
 // ---- message router ---------------------------------------------------------------------------------------

@@ -155,10 +155,10 @@ import { nthAtRangeEnd } from './lib/anchor.js';
     if (!a) return;
     hit = null; hideBubble(); getSelection().removeAllRanges();
     try {
-      const { kept } = await call({ t: 'del', url: location.href, id: a.id });
+      const { kept, verified } = await call({ t: 'del', url: location.href, id: a.id });
       if (kept) return toast('Diigo kept the highlight (it may belong to a group)', 'err');
       unpaint(a); anns.delete(a.id);
-      toast('Removed from Diigo', 'ok');
+      toast(verified ? 'Removed from Diigo' : 'Removed (Diigo could not confirm it yet)', verified ? 'ok' : 'warn');
     } catch (e) { fail(e); }
   }
   function clearAll() { for (const a of anns.values()) unpaint(a); anns.clear(); state.loaded = false; }
