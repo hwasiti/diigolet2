@@ -51,21 +51,26 @@ export function createRenderer() {
     else for (const el of p.els) el.style.textDecoration = pending ? 'underline dotted' : '';
   }
 
+  function unwrap(el) {
+    const parent = el.parentNode;
+    if (!parent) return;
+    while (el.firstChild) parent.insertBefore(el.firstChild, el);
+    parent.removeChild(el);
+  }
+
   function unpaint(id) {
     const p = painted.get(id);
-    if (!p) return;
-    if (p.range) {
-      groups[p.color].delete(p.range);
-      groups.pending.delete(p.range);
-    } else {
-      for (const el of p.els) {
-        const parent = el.parentNode;
-        if (!parent) continue;
-        while (el.firstChild) parent.insertBefore(el.firstChild, el);
-        parent.removeChild(el);
+    if (p) {
+      if (p.range) {
+        groups[p.color].delete(p.range);
+        groups.pending.delete(p.range);
+      } else {
+        for (const el of p.els) unwrap(el);
       }
+      painted.delete(id);
     }
-    painted.delete(id);
+    // Diigo's own extension may have wrapped the same highlight in <em class="diigoHighlight id_…">; clear that too.
+    for (const el of document.querySelectorAll('em.diigoHighlight.id_' + id)) unwrap(el);
   }
 
   function idAtPoint(x, y) {

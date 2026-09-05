@@ -83,6 +83,8 @@
   window.addEventListener('message', async (ev) => {
     const m = ev.data;
     if (!m || m.t !== 'dl2' || !ev.source) return;
+    // Answer whoever hails us: an existing helper window may be adopted by a page that did not open it.
+    if (m.hello) { ev.source.postMessage({ t: 'dl2', ready: true }, ev.origin); return; }
     if (m.bye) { say('Done. Closing…'); setTimeout(() => window.close(), 150); return; }
     if (!m.id) return;
     const reply = (r) => ev.source.postMessage(Object.assign({ t: 'dl2', id: m.id }, r), ev.origin);

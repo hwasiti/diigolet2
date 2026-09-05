@@ -33,10 +33,25 @@ export function createTransport({ helper, pageUrl, oneShot, onMode }) {
     else p.reject(Object.assign(new Error(m.error || 'helper error'), { code: m.error || 'helper' }));
   });
 
-  function waitReady(ms) {
-    return new Promise((res, rej) => {
-      readyResolve = res;
-      setTimeout(() => rej(Object.assign(new Error('timeout'), { code: 'timeout' })), ms);
+  /**
+   * Handshake with a helper window: keep sending "hello" until it answers "ready". Polling matters because
+   * the helper may already exist (a named window opened by an earlier page answers only whoever hails it),
+   * and a document that has not loaded yet simply drops the message. A handle that turns `closed` while we
+   * wait was severed by the page's Cross-Origin-Opener-Policy.
+   */
+  function handshake(win, ms) {
+    return new Promise((resolve, reject) => {
+      const started = Date.now();
+      let timer = 0;
+      const finish = (fn, v) => { clearInterval(timer); readyResolve = null; fn(v); };
+      readyResolve = (src) => { if (src === win) finish(resolve, src); };
+      const tick = () => {
+        if (win.closed) return finish(reject, Object.assign(new Error('opener isolated'), { code: 'coop' }));
+        if (Date.now() - started > ms) return finish(reject, Object.assign(new Error('timeout'), { code: 'timeout' }));
+        try { win.postMessage({ t: 'dl2', hello: true }, origin); } catch { /* not navigated yet */ }
+      };
+      timer = setInterval(tick, 250);
+      tick();
     });
   }
 
@@ -64,8 +79,7 @@ export function createTransport({ helper, pageUrl, oneShot, onMode }) {
       st.position = 'fixed'; st.width = '0'; st.height = '0'; st.border = '0'; st.left = '-9999px'; st.top = '0';
       frame.src = helperPage;
       document.documentElement.appendChild(frame);
-      const src = await waitReady(6000);
-      if (src !== frame.contentWindow) throw new Error('unexpected source');
+      await handshake(frame.contentWindow, 6000);
       mode = 'frame';
     } catch {
       if (frame) frame.remove();
@@ -81,10 +95,8 @@ export function createTransport({ helper, pageUrl, oneShot, onMode }) {
     if (mode === 'popup' && popupLive()) return mode;
     popup = window.open(helperPage + '#popup', 'dl2helper', 'popup=yes,width=460,height=380');
     if (!popup) throw Object.assign(new Error('popup blocked'), { code: 'blocked' });
-    // A page served with Cross-Origin-Opener-Policy gets a severed handle: the popup can never answer.
-    if (popup.closed) { popup = null; throw Object.assign(new Error('opener isolated'), { code: 'coop' }); }
     try {
-      await waitReady(8000);
+      await handshake(popup, 8000);
     } catch (e) {
       try { popup.close(); } catch { /* ignore */ }
       popup = null;

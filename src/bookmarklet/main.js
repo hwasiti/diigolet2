@@ -274,10 +274,27 @@ function createApp(cfg) {
     if (a._pending && !a._unconfirmed) return; // never reached the server
     const payload = payloads.del(ctx.urlId || urlIdFor(md5, url), id);
     try {
-      const resp = await transport.session((call) => call('annotation_delete', payload, ctx.user));
+      // Diigo answers "success" to deletes it does not perform on some bookmarks, so verify by reloading.
+      const { resp, stillThere } = await transport.session(async (call) => {
+        const resp = await call('annotation_delete', payload, ctx.user);
+        let stillThere = false;
+        if (resp.code === 1) {
+          await new Promise((r) => setTimeout(r, 1200));
+          const check = await call('bm_loadBookmark', payloads.load(url), ctx.user);
+          stillThere = !!(check.result && (check.result.annotations || []).some((x) => x.id === id));
+          if (stillThere) { fresh(); place(check.result.annotations.find((x) => x.id === id), false); }
+        }
+        return { resp, stillThere };
+      });
       noteUser(resp);
       refreshPen();
-      ui.setStatus(resp.code === 1 ? 'Removed · ' + summary() : 'Remove rejected', resp.code === 1 ? 'ok' : 'bad');
+      ui.setCount(ctx.anns.size);
+      if (stillThere) {
+        ui.setStatus('Diigo kept this highlight', 'bad');
+        ui.toast('Diigo accepted the delete but still lists the highlight. Remove it from your Diigo library page.', 5000);
+      } else {
+        ui.setStatus(resp.code === 1 ? 'Removed · ' + summary() : 'Remove rejected', resp.code === 1 ? 'ok' : 'bad');
+      }
     } catch (e) {
       if (e.code === 'nochannel') {
         transport.navigate(jsonpUrl('annotation_delete', payload, ctx.user, Date.now() % 1e6));
