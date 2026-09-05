@@ -1,13 +1,17 @@
 // How the page talks to Diigo despite the page's CSP.
-//  frame : hidden iframe of our helper page (postMessage RPC; needs frame-src to allow it)
-//  popup : the same helper page in a window opened on a user tap (postMessage RPC)
-//  navigation : fire-and-forget top-level GET to diigo.com (works everywhere, no confirmation)
-export function createTransport({ helper, onMode }) {
+//  frame   : hidden iframe of our helper page (postMessage RPC); needs the page to allow embedding us
+//  popup   : the helper page opened on a user tap. On desktop it is a small window kept open; on phones
+//            there are no popup windows, so it is a one-shot round trip: the helper tab opens, serves the
+//            session and closes itself, which drops the user back on the article automatically
+//  navigate: fire-and-forget top-level GET to diigo.com; works everywhere but cannot confirm or read
+export function createTransport({ helper, oneShot, onMode }) {
   let mode = 'none';
   let frame = null, popup = null, seq = 0, readyResolve = null;
   const pending = new Map();
   // `helper` is a base URL that may carry a path (https://user.github.io/diigolet2); message origins never do.
   const origin = new URL(helper).origin;
+  const mobile = typeof oneShot === 'boolean' ? oneShot
+    : (navigator.userAgentData ? !!navigator.userAgentData.mobile : /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent));
 
   window.addEventListener('message', (ev) => {
     if (ev.origin !== origin) return;
@@ -29,15 +33,19 @@ export function createTransport({ helper, onMode }) {
     });
   }
 
+  const popupLive = () => !!popup && !popup.closed;
+
   const target = () => {
     if (mode === 'frame') return frame.contentWindow;
     if (mode === 'popup') {
-      if (popup && !popup.closed) return popup;
+      if (popupLive()) return popup;
       // The user closed the helper window: fall back so the pen offers to reconnect.
       popup = null; mode = 'none'; onMode(mode);
     }
     return null;
   };
+
+  const hasChannel = () => !!target();
 
   async function init() {
     try {
@@ -61,9 +69,9 @@ export function createTransport({ helper, onMode }) {
     return mode;
   }
 
-  /** Must be called from a user gesture. */
+  /** Must be called from a user gesture. Throws with code blocked | coop | timeout. */
   async function openPopup() {
-    if (popup && !popup.closed && mode === 'popup') return mode;
+    if (mode === 'popup' && popupLive()) return mode;
     popup = window.open(helper + '/helper.html#popup', 'dl2helper', 'popup=yes,width=460,height=380');
     if (!popup) throw Object.assign(new Error('popup blocked'), { code: 'blocked' });
     // A page served with Cross-Origin-Opener-Policy gets a severed handle: the popup can never answer.
@@ -80,6 +88,15 @@ export function createTransport({ helper, onMode }) {
     return mode;
   }
 
+  function closePopup() {
+    if (popup) {
+      try { popup.postMessage({ t: 'dl2', bye: true }, origin); } catch { /* ignore */ }
+      try { popup.close(); } catch { /* ignore */ }
+    }
+    popup = null;
+    if (mode === 'popup') { mode = 'none'; onMode(mode); }
+  }
+
   function call(cmd, payload, user) {
     const win = target();
     if (!win) return Promise.reject(Object.assign(new Error('no channel'), { code: 'nochannel' }));
@@ -94,6 +111,28 @@ export function createTransport({ helper, onMode }) {
     });
   }
 
+  /**
+   * Run fn(call) over a channel. Uses the frame or the live popup when there is one; otherwise opens the
+   * popup (needs a user gesture) and, on phones, closes it again afterwards. Rejects with code 'nochannel'
+   * (reason in .reason) when no channel could be established.
+   */
+  async function session(fn) {
+    let opened = false;
+    if (!hasChannel()) {
+      try {
+        await openPopup();
+        opened = true;
+      } catch (e) {
+        throw Object.assign(new Error('no channel'), { code: 'nochannel', reason: e.code || 'error' });
+      }
+    }
+    try {
+      return await fn(call);
+    } finally {
+      if (opened && mobile) closePopup();
+    }
+  }
+
   /** Top-level GET to diigo.com; the tab closes itself after the request has had time to land. */
   function navigate(url) {
     const w = window.open(url, '_blank');
@@ -101,5 +140,5 @@ export function createTransport({ helper, onMode }) {
     return !!w;
   }
 
-  return { init, openPopup, call, navigate, mode: () => mode };
+  return { init, session, call, navigate, closePopup, hasChannel, mode: () => mode, oneShot: () => mobile, popupLive };
 }

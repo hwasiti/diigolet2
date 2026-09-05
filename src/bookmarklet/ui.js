@@ -14,7 +14,7 @@ const CSS = `
 .dot:active{transform:scale(.92)}
 .remove{display:none;border:1px solid #b3261e;color:#b3261e;background:#fff;border-radius:16px;padding:7px 10px;font:600 13px system-ui,sans-serif;cursor:pointer}.remove.on{display:block}
 .pen{width:48px;height:48px;border-radius:50%;border:0;background:#1f5fbf;color:#fff;font:700 22px/1 system-ui,sans-serif;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.25);position:relative;display:flex;align-items:center;justify-content:center;padding:0}
-.pen.none{background:#6b6b6b}.pen.popup{background:#3b7dd8}
+.pen.none{background:#6b6b6b}.pen.popup,.pen.oneshot{background:#3b7dd8}
 .count{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:#ffe86b;color:#111;font:700 11px/18px system-ui,sans-serif;padding:0 4px;display:none;box-sizing:border-box;text-align:center}.count.on{display:block}
 .toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#222;color:#fff;padding:8px 12px;border-radius:8px;font:13px system-ui,sans-serif;max-width:82vw;z-index:2147483647;display:none}.toast.on{display:block}
 button:focus-visible{outline:2px solid #1f5fbf;outline-offset:2px}

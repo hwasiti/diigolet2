@@ -31,6 +31,7 @@ writeFileSync('docs/.nojekyll', '');
 
 // Developer build for automated tests: helper on localhost.
 const devCfg = { h: process.env.DL2_HELPER || 'http://localhost:8765', u: process.env.DL2_USER || '' };
+if (process.env.DL2_ONESHOT) devCfg.o = Number(process.env.DL2_ONESHOT); // 1 forces the phone path, 0 the desktop path
 writeFileSync('dist/bookmarklet.dev.js', code.replace('"%%DL2_CFG%%"', JSON.stringify(devCfg)));
 
 console.log(`bookmarklet ${code.length} bytes (${(code.length / 1024).toFixed(1)} KB) -> dist/bookmarklet.js, docs/`);

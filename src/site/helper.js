@@ -73,7 +73,9 @@
 
   window.addEventListener('message', async (ev) => {
     const m = ev.data;
-    if (!m || m.t !== 'dl2' || !m.id || !ev.source) return;
+    if (!m || m.t !== 'dl2' || !ev.source) return;
+    if (m.bye) { say('Done. Closing…'); setTimeout(() => window.close(), 150); return; }
+    if (!m.id) return;
     const reply = (r) => ev.source.postMessage(Object.assign({ t: 'dl2', id: m.id }, r), ev.origin);
     if (!ALLOW.has(m.cmd) || typeof m.payload !== 'object' || m.payload === null) return reply({ ok: false, error: 'badcmd' });
     if (!allowed(m, ev.origin)) return reply({ ok: false, error: 'forbidden' });
@@ -91,7 +93,7 @@
   const owner = window.opener || (window.parent !== window ? window.parent : null);
   if (owner) {
     owner.postMessage({ t: 'dl2', ready: true }, '*');
-    say('Ready. Keep this tab open while highlighting.');
+    say(window.parent !== window ? 'Ready.' : 'Talking to Diigo… This window closes itself on phones; on desktop, leave it open while highlighting.');
   } else {
     say('This window could not connect back to the page (the site isolates popups). You can close it; highlights on that site are sent to Diigo directly, without confirmation.');
   }

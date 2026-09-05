@@ -9,7 +9,7 @@ import { store } from './store.js';
 import { createUi } from './ui.js';
 import { payloads, annotationId, jsonpUrl, urlIdFor, PRIVACY } from './diigo.js';
 
-// The install page replaces the placeholder string with {h: helperOrigin, u: username}.
+// The install page replaces the placeholder string with {h: helperOrigin, u: username[, o: 0|1]}.
 const CFG = window.__dl2cfg || "%%DL2_CFG%%";
 const DEV_CFG = { h: 'http://localhost:8765', u: '' };
 const MIN_CHARS = 5, MAX_CHARS = 2000, MAX_ENCODED = 3600;
@@ -37,9 +37,18 @@ function createApp(cfg) {
   };
   const renderer = createRenderer();
   const ui = createUi({ onColor: highlightSelection, onPen: onPenTap, onRemove: removeHighlight });
-  const transport = createTransport({ helper: cfg.h, onMode: (m) => ui.setMode(m) });
+  const transport = createTransport({
+    helper: cfg.h,
+    oneShot: cfg.o === 1 ? true : cfg.o === 0 ? false : undefined,
+    onMode: () => refreshPen(),
+  });
   let draft = null, draftTimer = 0, snap = null;
   const cacheKey = 'page:' + url;
+
+  function refreshPen() {
+    const m = transport.mode();
+    ui.setMode(m !== 'none' ? m : (ctx.known && transport.oneShot() ? 'oneshot' : 'none'));
+  }
 
   async function start() {
     ui.mount();
@@ -47,7 +56,7 @@ function createApp(cfg) {
     paintCached();
     const mode = await transport.init();
     if (mode === 'frame') await load();
-    else ui.setStatus(ctx.anns.size ? `${ctx.anns.size} cached · tap pen to connect` : 'Tap the pen to connect', 'warn');
+    else ui.setStatus(ctx.anns.size ? `${ctx.anns.size} cached · tap pen to sync` : 'Tap the pen to connect', 'warn');
   }
 
   function fresh() { snap = T.snapshot(); return snap; }
@@ -64,7 +73,7 @@ function createApp(cfg) {
   }
 
   function slim(a) {
-    return { id: a.id, content: a.content, type: 0, extra: a.extra, user: a.user, _pending: !!a._pending, _failed: !!a._failed };
+    return { id: a.id, content: a.content, type: 0, extra: a.extra, user: a.user, _pending: !!a._pending, _failed: !!a._failed, _unconfirmed: !!a._unconfirmed };
   }
 
   function cacheWrite() {
@@ -82,6 +91,7 @@ function createApp(cfg) {
     fresh();
     for (const a of Object.values(c.anns || {})) place(a, a._pending || a._failed);
     ui.setCount(ctx.anns.size);
+    refreshPen();
   }
 
   function noteUser(resp) {
@@ -92,36 +102,46 @@ function createApp(cfg) {
     }
   }
 
+  function channelMessage(e) {
+    if (e.code !== 'nochannel') return null;
+    if (e.reason === 'blocked') return 'Popup blocked; allow popups for this site';
+    if (e.reason === 'coop') return 'This site isolates popups; saves go out unconfirmed';
+    return 'Helper unreachable; saves go out unconfirmed';
+  }
+
   async function load() {
     try {
       ui.setStatus('Loading…');
-      const resp = await transport.call('bm_loadBookmark', payloads.load(url), ctx.user);
-      noteUser(resp);
-      if (resp.code !== 1 || !resp.result) throw Object.assign(new Error('load rejected'), { code: 'rejected' });
-      const res = resp.result;
-      ctx.urlId = res.urlId || ctx.urlId;
-      ctx.saved = !!res.saved;
-      ctx.known = true;
-      if (res.bookmarkInfo && res.bookmarkInfo.title) ctx.title = res.bookmarkInfo.title;
-      // Server view wins: forget cached copies that Diigo no longer has, keep unsaved local ones.
-      for (const [id, a] of [...ctx.anns]) if (!a._pending && !a._failed) { renderer.unpaint(id); ctx.anns.delete(id); }
-      fresh();
-      for (const a of res.annotations || []) if (a.type === 0) place(a, false);
-      if (alt !== url) {
-        try {
-          const r2 = await transport.call('bm_loadBookmark', payloads.load(alt), ctx.user);
-          if (r2.code === 1 && r2.result && r2.result.annotations) {
-            for (const a of r2.result.annotations) if (a.type === 0 && !ctx.anns.has(a.id)) place({ ...a, _foreignUrl: alt }, false);
-          }
-        } catch { /* secondary URL is best effort */ }
-      }
-      cacheWrite();
-      ui.setCount(ctx.anns.size);
+      await transport.session(async (call) => {
+        const resp = await call('bm_loadBookmark', payloads.load(url), ctx.user);
+        noteUser(resp);
+        if (resp.code !== 1 || !resp.result) throw Object.assign(new Error('load rejected'), { code: 'rejected' });
+        const res = resp.result;
+        ctx.urlId = res.urlId || ctx.urlId;
+        ctx.saved = !!res.saved;
+        ctx.known = true;
+        if (res.bookmarkInfo && res.bookmarkInfo.title) ctx.title = res.bookmarkInfo.title;
+        // Server view wins: forget cached copies that Diigo no longer has, keep unsaved local ones.
+        for (const [id, a] of [...ctx.anns]) if (!a._pending && !a._failed) { renderer.unpaint(id); ctx.anns.delete(id); }
+        fresh();
+        for (const a of res.annotations || []) if (a.type === 0) place(a, false);
+        if (alt !== url) {
+          try {
+            const r2 = await call('bm_loadBookmark', payloads.load(alt), ctx.user);
+            if (r2.code === 1 && r2.result && r2.result.annotations) {
+              for (const a of r2.result.annotations) if (a.type === 0 && !ctx.anns.has(a.id)) place({ ...a, _foreignUrl: alt }, false);
+            }
+          } catch { /* secondary URL is best effort */ }
+        }
+        cacheWrite();
+        ui.setCount(ctx.anns.size);
+        await retryFailed(call);
+      });
+      refreshPen();
       if (ctx.signedIn === false) ui.setStatus('Not signed in to Diigo', 'warn');
       else ui.setStatus(summary(), 'ok');
-      retryFailed();
     } catch (e) {
-      ui.setStatus('Diigo unreachable: ' + (e.code || e.message), 'warn');
+      ui.setStatus(channelMessage(e) || 'Diigo unreachable: ' + (e.code || e.message), 'warn');
     }
   }
 
@@ -185,30 +205,24 @@ function createApp(cfg) {
     await save(a, urlId);
   }
 
-  async function save(a, urlId) {
+  /** Saves one highlight. `call` is set when already inside a helper session (retries after a load). */
+  async function save(a, urlId, call) {
     const first = !ctx.saved;
     if (first && !ctx.known) {
       // Unknown state: do not risk bm_saveBookmark on an existing bookmark. Keep it pending until connected.
       a._failed = true; a._pending = true;
       cacheWrite();
-      ui.setStatus('Connect to Diigo to save this page’s first highlight', 'warn');
-      ui.toast('Tap the pen to connect; the highlight is kept and saved then');
+      ui.setStatus('Tap the pen to connect and save this page’s first highlight', 'warn');
+      ui.toast('The highlight is kept; it is saved once Diigo confirms this page’s bookmark state');
       return;
     }
     const cmd = first ? 'bm_saveBookmark' : 'annotation_add';
     const payload = first ? payloads.saveWith(url, ctx.title, a, PRIVACY.PRIVATE) : payloads.add(urlId, a);
-    if (transport.mode() === 'none') {
-      if (!transport.navigate(jsonpUrl(cmd, payload, ctx.user, Date.now() % 1e6))) { markFailed(a, 'blocked'); return; }
-      a._pending = false; a._failed = false; a._unconfirmed = true; ctx.saved = true;
-      renderer.setPending(a.id, false);
-      cacheWrite();
-      ui.setStatus('Sent to Diigo (unconfirmed)', 'warn');
-      return;
-    }
     if (first) ctx.saved = true; // so a second quick highlight does not re-save the bookmark
     try {
       ui.setStatus('Saving…');
-      const resp = await transport.call(cmd, payload, ctx.user);
+      const run = (c) => c(cmd, payload, ctx.user);
+      const resp = call ? await run(call) : await transport.session(run);
       noteUser(resp);
       if (resp.code !== 1) throw Object.assign(new Error('rejected'), { code: resp.user === null ? 'signin' : 'rejected' });
       ctx.saved = true; ctx.known = true;
@@ -216,11 +230,23 @@ function createApp(cfg) {
       a._pending = false; a._failed = false;
       renderer.setPending(a.id, false);
       cacheWrite();
+      refreshPen();
       ui.setStatus('Saved · ' + summary(), 'ok');
     } catch (e) {
       if (first) ctx.saved = false;
+      if (e.code === 'nochannel') { sendBlind(a, cmd, payload, first); return; }
       markFailed(a, e.code || e.message);
     }
+  }
+
+  /** No channel at all: deliver through a top-level navigation. Diigo processes it; we cannot confirm. */
+  function sendBlind(a, cmd, payload, first) {
+    if (!transport.navigate(jsonpUrl(cmd, payload, ctx.user, Date.now() % 1e6))) { markFailed(a, 'blocked'); return; }
+    a._pending = false; a._failed = false; a._unconfirmed = true;
+    if (first) ctx.saved = true;
+    renderer.setPending(a.id, false);
+    cacheWrite();
+    ui.setStatus('Sent to Diigo (unconfirmed)', 'warn');
   }
 
   function markFailed(a, why) {
@@ -232,8 +258,8 @@ function createApp(cfg) {
       : 'Save failed. Tap the pen to retry.');
   }
 
-  async function retryFailed() {
-    for (const a of [...ctx.anns.values()]) if (a._failed) await save(a, ctx.urlId || urlIdFor(md5, url));
+  async function retryFailed(call) {
+    for (const a of [...ctx.anns.values()]) if (a._failed) await save(a, ctx.urlId || urlIdFor(md5, url), call);
   }
 
   async function removeHighlight(id) {
@@ -244,37 +270,33 @@ function createApp(cfg) {
     ctx.anns.delete(id);
     ui.setCount(ctx.anns.size);
     cacheWrite();
-    const urlId = ctx.urlId || urlIdFor(md5, url);
     if (a._pending && !a._unconfirmed) return; // never reached the server
-    if (transport.mode() === 'none') { transport.navigate(jsonpUrl('annotation_delete', payloads.del(urlId, id), ctx.user, Date.now() % 1e6)); return; }
+    const payload = payloads.del(ctx.urlId || urlIdFor(md5, url), id);
     try {
-      const resp = await transport.call('annotation_delete', payloads.del(urlId, id), ctx.user);
+      const resp = await transport.session((call) => call('annotation_delete', payload, ctx.user));
       noteUser(resp);
+      refreshPen();
       ui.setStatus(resp.code === 1 ? 'Removed · ' + summary() : 'Remove rejected', resp.code === 1 ? 'ok' : 'bad');
     } catch (e) {
+      if (e.code === 'nochannel') {
+        transport.navigate(jsonpUrl('annotation_delete', payload, ctx.user, Date.now() % 1e6));
+        ui.setStatus('Removal sent (unconfirmed)', 'warn');
+        return;
+      }
       ui.setStatus('Remove failed: ' + (e.code || e.message), 'bad');
     }
   }
 
   async function onPenTap() {
-    if (transport.mode() === 'none') {
-      try {
-        ui.setStatus('Connecting…');
-        await transport.openPopup();
-        await load();
-      } catch (e) {
-        ui.setStatus(e.code === 'blocked' ? 'Popup blocked; saves go out unconfirmed'
-          : e.code === 'coop' ? 'This site isolates popups; saves go out unconfirmed'
-          : 'Helper unreachable; saves go out unconfirmed', 'warn');
-        ui.toast('Highlights are still sent to Diigo, but cannot be confirmed or re-loaded on this site.');
-      }
+    if (ctx.signedIn === false) {
+      window.open('https://www.diigo.com/sign-in', '_blank');
+      ui.toast('Sign in, then tap the pen again');
+      ctx.signedIn = null;
       return;
     }
-    if (ctx.signedIn === false) { window.open('https://www.diigo.com/sign-in', '_blank'); ui.toast('Sign in, then tap the pen again'); ctx.signedIn = null; return; }
-    if ([...ctx.anns.values()].some((a) => a._failed)) { await retryFailed(); return; }
     if (draft) { ui.showPalette(true); return; }
     await load();
-    ui.toast('Select text, then tap a colour');
+    if (ctx.known) ui.toast('Select text, then tap a colour');
   }
 
   return {
@@ -287,7 +309,8 @@ function createApp(cfg) {
       remove: removeHighlight,
       reload: load,
       connect: onPenTap,
-      state: () => ({ url: ctx.url, user: ctx.user, urlId: ctx.urlId, saved: ctx.saved, signedIn: ctx.signedIn, mode: transport.mode(), usesApi: renderer.usesApi(), status: ui.getStatus(),
+      state: () => ({ url: ctx.url, user: ctx.user, urlId: ctx.urlId, saved: ctx.saved, known: ctx.known, signedIn: ctx.signedIn,
+        mode: transport.mode(), oneShot: transport.oneShot(), popupLive: transport.popupLive(), usesApi: renderer.usesApi(), status: ui.getStatus(),
         anns: [...ctx.anns.values()].map((a) => ({ id: a.id, nth: a.extra && a.extra.nth, color: a.extra && a.extra.color, pending: !!a._pending, failed: !!a._failed, lost: !!a._lost, content: a.content.slice(0, 60) })) }),
     },
   };
