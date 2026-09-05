@@ -19,6 +19,13 @@ Diigo's website, apps and official extension, and highlights made elsewhere rend
 - **Saving and loading.** A small helper page (`src/site/`) hosted on our own origin relays Diigo's JSONP API,
   reached first as a hidden iframe, then as a popup opened on a tap, and finally, when neither is possible, a
   fire-and-forget top-level navigation to diigo.com that works everywhere but cannot confirm.
+- **Where each channel works.** The hidden frame needs the page to allow embedding our origin (`frame-src`,
+  `child-src` or `default-src`); of 16 popular sites surveyed, 11 restrict frames, so the popup path matters. The
+  popup needs the page not to send `Cross-Origin-Opener-Policy: same-origin` (stackoverflow.com does; GitHub and
+  most publishers do not). Where neither channel works, saves still go out through the navigation route but
+  cannot be confirmed and existing highlights cannot be loaded.
+- **Updating.** The bookmark embeds the engine, so a new release means re-dragging the bookmarklet from the
+  install page on each device.
 - **Origin-bound relay.** The helper only honours requests about URLs on the origin that sent them, and only
   writes highlights for urlIds it learned from that origin's own loads. A hostile page embedding the helper can
   therefore only touch highlights on its own pages, which Diigo's public JSONP endpoint already allows any page

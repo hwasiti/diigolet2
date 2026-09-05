@@ -29,7 +29,15 @@ export function createTransport({ helper, onMode }) {
     });
   }
 
-  const target = () => (mode === 'frame' ? frame.contentWindow : mode === 'popup' && popup && !popup.closed ? popup : null);
+  const target = () => {
+    if (mode === 'frame') return frame.contentWindow;
+    if (mode === 'popup') {
+      if (popup && !popup.closed) return popup;
+      // The user closed the helper window: fall back so the pen offers to reconnect.
+      popup = null; mode = 'none'; onMode(mode);
+    }
+    return null;
+  };
 
   async function init() {
     try {
