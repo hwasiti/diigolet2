@@ -6,9 +6,11 @@ export function createTransport({ helper, onMode }) {
   let mode = 'none';
   let frame = null, popup = null, seq = 0, readyResolve = null;
   const pending = new Map();
+  // `helper` is a base URL that may carry a path (https://user.github.io/diigolet2); message origins never do.
+  const origin = new URL(helper).origin;
 
   window.addEventListener('message', (ev) => {
-    if (ev.origin !== helper) return;
+    if (ev.origin !== origin) return;
     const m = ev.data;
     if (!m || m.t !== 'dl2') return;
     if (m.ready) { readyResolve && readyResolve(ev.source); return; }
@@ -72,7 +74,7 @@ export function createTransport({ helper, onMode }) {
         reject(Object.assign(new Error('timeout'), { code: 'timeout' }));
       }, 20000);
       pending.set(id, { resolve, reject, timer });
-      win.postMessage({ t: 'dl2', v: 1, id, cmd, payload, user }, helper);
+      win.postMessage({ t: 'dl2', v: 1, id, cmd, payload, user }, origin);
     });
   }
 
