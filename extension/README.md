@@ -32,20 +32,27 @@ extension was loaded get a "Enable on this page" button in the popup.
 ## Why not fix the official extension
 
 It is signed by Diigo and auto-updated from the Web Store, and its code is a Manifest V2 design from 2013 with a
-thin Manifest V3 wrapper. The defects that matter for highlighting, all confirmed in code and reproduced with
-`harness/official-repro.mjs`:
+thin Manifest V3 wrapper. The defects that matter for highlighting, confirmed in the code and (where marked)
+reproduced with `harness/official-repro.mjs` in Chrome for Testing with a signed-in profile:
 
-- Its service worker registers its message/tab listeners asynchronously (after a storage read), so the message
-  that wakes the worker after Chrome killed it (30 s idle) can be lost: the shortcut or popup button then does
-  nothing.
-- Every worker start resets its sign-in state to "signed out" and only then checks the login cookie, so anything
-  asked in that window is told "Please sign in first" although Chrome is signed in; the popup, which reads the
-  cookie itself, disagrees with the page.
-- Auto-show of existing highlights is skipped whenever the worker was just restarted (it checks the in-memory
-  sign-in flag before the cookie is read).
+- Its service worker registers its message/tab listeners asynchronously (after a storage read). Reproduced: right
+  after Chrome restarts the worker (it kills it after 30 s idle), the content script's first request gets no reply
+  at all ("Receiving end does not exist"), so the popup button does nothing that time.
+- Every worker start resets its sign-in state to "signed out" and only then checks the login cookie. Reproduced:
+  the next request after a restart is answered with user "" — the page says "Please sign in first" although
+  Chrome is signed in — and only about two seconds later does the worker know the user. The popup reads the
+  cookie itself and disagrees with the page.
+- All seven keyboard shortcuts (Ctrl+Alt+A, D, R, T, P, S, O) are dead: a multi-key preference read returns an
+  array where the code expects an object. Reproduced: Ctrl+Alt+A does nothing while the popup's command works.
+- Auto-show of existing highlights checks the in-memory sign-in flag before the cookie is read (skipped after a
+  restart in the code; in our run it still appeared because the content script loads by itself).
 - Context-menu clicks have no listener after a restart; several removed APIs (`tabs.sendRequest`,
-  `extension.sendRequest`, `window`/`alert` in the worker) throw; Diigo calls have no timeout or error path.
+  `extension.sendRequest`, `window`/`alert` in the worker) throw; Diigo calls have no timeout or error path, so
+  an HTML error page or a dropped connection leaves a highlight painted but never saved.
 - 760 KB of content script (jQuery 1.8 + a 2013 code base) on every page, with a storage round trip per key press.
+
+A full review with 20 findings (also security ones: page-controlled `postMessage` handlers, server HTML inserted
+unsanitised) is in the session notes; none of those patterns is used here.
 
 What this extension does instead: every listener is registered at top level; nothing that matters lives in
 worker globals (sign-in and per-tab state sit in `chrome.storage.session`); the sign-in state comes from the
@@ -60,7 +67,9 @@ do not block.
 
 `POST https://www.diigo.com/chappai/pv=13/ct=tb/cv=<version>/user=<user>/cmd=<cmd>/` with a form body
 (`cmd, v, _nocache, json, user, transId`), which is the official extension's "toolbar" dialect; www.diigo.com
-answers it with plain JSON (the bookmarklet uses the JSONP `ct=let` dialect on the same host). Commands used:
+answers it with plain JSON (the bookmarklet uses the JSONP `ct=let` dialect on the same host). The worker sends
+`credentials: 'include'`; a worker fetch to a host in `host_permissions` carries the diigo.com cookies even
+without it (measured with `harness/cred-check.mjs`), but being explicit costs nothing. Commands used:
 `bm_loadBookmark`, `annotation_add`, `annotation_delete`, `bm_saveBookmark` (only for a page Diigo reports as
 unsaved, because re-saving wipes the bookmark's tags). Highlight ids are `MD5(content + user + urlId + nth)` with
 Diigo's low-byte MD5 quirk (`src/bookmarklet/md5.js`). `nth` counts occurrences of the whitespace-free text up
@@ -96,5 +105,14 @@ node official-repro.mjs                           # the official extension's fai
 node probe.mjs https://github.com/ https://x.com/ # what a content script may do under each site's CSP
 ```
 
-The end-to-end scripts need `harness/profile` to be signed in to Diigo (open Chrome for Testing once with
-`HEADED=1` and sign in, or let a helper script do it); the profile directory is gitignored.
+The end-to-end scripts need `harness/profile` to be signed in to Diigo. `node signin-and-test.mjs` opens the
+test browser at Diigo's sign-in page, waits for you to sign in (Diigo shows a CAPTCHA to automated browsers after
+a few attempts), makes the session cookies persistent and then runs the four suites into `harness/results/`.
+The profile directory is gitignored. Note that `ext-e2e.mjs` creates a real bookmark for its test page in your
+library (the highlight it makes is removed again, the bookmark stays).
+
+Results on 2026-09-05 (Chrome for Testing 148, signed in): `official-repro` reproduced the lost first reply and
+the "user empty" second reply after a worker restart and the dead shortcut; `ext-e2e` passed all 17 checks;
+`ext-sites` found the content script and its bubble working on GitHub, Wikipedia, MDN, Hacker News, NYT, Guardian,
+Medium, web.dev, BBC, arXiv and Google Docs (Reddit's SPA replaced the test harness's script context, not a
+failure of the extension); `cred-check` showed cookies are sent with the default credentials mode.
