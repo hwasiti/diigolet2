@@ -90,6 +90,11 @@ export function createUi(handlers) {
     contains(node) { return !!node && (host === node || host.contains(node)); },
     setStatus(text, kind) { status.textContent = text; status.className = 'status' + (kind ? ' ' + kind : ''); },
     getStatus() { return status.textContent; },
+    // Geometry of the controls, for automated tests that tap by coordinates.
+    rects() {
+      const r = (el) => { const b = el.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height, cx: b.left + b.width / 2, cy: b.top + b.height / 2 }; };
+      return { pen: r(pen), remove: r(remove), dots: Object.fromEntries([...palette.children].map((d) => [d.className.split(' ')[1], r(d)])) };
+    },
     setMode(mode) { pen.className = 'pen ' + mode; },
     setCount(n) { count.textContent = String(n); count.classList.toggle('on', n > 0); },
     showPalette(on) { palette.classList.toggle('on', !!on); if (on) offerRemove(null); },

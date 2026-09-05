@@ -309,6 +309,7 @@ function createApp(cfg) {
       remove: removeHighlight,
       reload: load,
       connect: onPenTap,
+      rects: () => ui.rects(),
       state: () => ({ url: ctx.url, user: ctx.user, urlId: ctx.urlId, saved: ctx.saved, known: ctx.known, signedIn: ctx.signedIn,
         mode: transport.mode(), oneShot: transport.oneShot(), popupLive: transport.popupLive(), usesApi: renderer.usesApi(), status: ui.getStatus(),
         anns: [...ctx.anns.values()].map((a) => ({ id: a.id, nth: a.extra && a.extra.nth, color: a.extra && a.extra.color, pending: !!a._pending, failed: !!a._failed, lost: !!a._lost, content: a.content.slice(0, 60) })) }),

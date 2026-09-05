@@ -10,8 +10,13 @@ export function createTransport({ helper, oneShot, onMode }) {
   const pending = new Map();
   // `helper` is a base URL that may carry a path (https://user.github.io/diigolet2); message origins never do.
   const origin = new URL(helper).origin;
+  // Phones and tablets have no popup windows, only tabs. Chrome's "Desktop site" mode on Android spoofs a
+  // Linux desktop UA (and a stylus can make hover/pointer media queries look like a desktop), so also treat a
+  // multi-touch device that is not Windows, macOS or ChromeOS as a phone.
+  const ua = navigator.userAgent;
   const mobile = typeof oneShot === 'boolean' ? oneShot
-    : (navigator.userAgentData ? !!navigator.userAgentData.mobile : /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent));
+    : (!!(navigator.userAgentData && navigator.userAgentData.mobile) || /Android|iPhone|iPad|Mobile/i.test(ua)
+      || (navigator.maxTouchPoints > 1 && !/Windows NT|Macintosh|CrOS/.test(ua)));
 
   window.addEventListener('message', (ev) => {
     if (ev.origin !== origin) return;
