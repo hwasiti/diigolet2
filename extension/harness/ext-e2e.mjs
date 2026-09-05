@@ -39,8 +39,8 @@ try {
   const before = await diigoAnns(PAGE);
   log('Diigo before:', JSON.stringify(before).slice(0, 300));
 
-  // Highlight the second paragraph of the article
-  await page.evaluate(() => { const ps = [...document.querySelectorAll('article p, main p')].filter((p) => p.innerText.trim().length > 60); const p = ps[1] || ps[0]; const r = document.createRange(); r.selectNodeContents(p); getSelection().removeAllRanges(); getSelection().addRange(r); });
+  // Highlight a paragraph of the article, preferably one with a non-ASCII character (id hashing, escaping)
+  await page.evaluate(() => { const ps = [...document.querySelectorAll('article p, main p')].filter((p) => p.innerText.trim().length > 60); const p = ps.find((x) => /[^\x00-\x7f]/.test(x.innerText)) || ps[1] || ps[0]; const r = document.createRange(); r.selectNodeContents(p); getSelection().removeAllRanges(); getSelection().addRange(r); });
   const selected = await page.evaluate(() => getSelection().toString().replace(/\s+/g, ' ').trim());
   await sleep(400);
   await command(tabId, 'highlight-selection');

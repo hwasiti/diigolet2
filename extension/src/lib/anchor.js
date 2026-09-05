@@ -9,6 +9,9 @@ import { occurrences, stripWs } from '../../../src/bookmarklet/text.js';
  * and endOffset; `S` is a snapshot {docTxt, list:[{node, offset, len}]}.
  */
 export function nthAtRangeEnd(range, S, txt) {
+  // occurrences() restarts one character before a match's end (Diigo's quirk); a one-character text would
+  // never advance, so such selections are not anchored by occurrence.
+  if (!txt || txt.length < 2) return 1;
   let prefix = 0;
   for (const e of S.list) {
     if (!range.intersectsNode(e.node)) continue;

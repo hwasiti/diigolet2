@@ -15,6 +15,8 @@ import { nthAtRangeEnd } from './lib/anchor.js';
   const COLORS = ['yellow', 'blue', 'green', 'pink'];
   const HEX = { yellow: '#fff59d', blue: '#b3e5fc', green: '#c5e1a5', pink: '#f8bbd0' };
   const MAX_CHARS = 3000; // Diigo's limit on whitespace-free characters per highlight
+  const MIN_CHARS = 2; // occurrence anchoring cannot work on a single character
+  const pageKey = () => location.href.replace(/#.*$/, '');
   const debounce = (fn, ms) => { let t; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; };
 
   // ---- talking to the worker ---------------------------------------------------------------------------
@@ -44,7 +46,7 @@ import { nthAtRangeEnd } from './lib/anchor.js';
 
   function locate(a, S) {
     const txt = stripWs(html2txt(a.content));
-    if (!txt) return null;
+    if (txt.length < MIN_CHARS) return null;
     // Fewer occurrences than the stored nth means the page changed: the official client then paints the last
     // occurrence, which is usually the wrong text; we report the highlight as not found instead.
     const pos = seek(S, txt, a.nth);
@@ -136,9 +138,9 @@ import { nthAtRangeEnd } from './lib/anchor.js';
     draft = null; hideBubble();
     const S = snapshot();
     const d = describeRange(r, S);
-    if (!d.txt) return;
-    d.nth = nthAtRangeEnd(r, S, d.txt);
+    if (d.txt.length < MIN_CHARS) return toast('Select at least two characters', 'warn');
     if (d.txt.length > MAX_CHARS) return toast(`Too long: Diigo allows up to ${MAX_CHARS} characters per highlight`, 'err');
+    d.nth = nthAtRangeEnd(r, S, d.txt);
     const rect = r.getBoundingClientRect();
     const a = { color, range: r.cloneRange(), txt: d.txt, nth: d.nth, content: d.content, mine: true };
     paint(a);
@@ -163,8 +165,10 @@ import { nthAtRangeEnd } from './lib/anchor.js';
   }
   function clearAll() { for (const a of anns.values()) unpaint(a); anns.clear(); state.loaded = false; }
   async function load(quiet) {
+    const at = pageKey();
     let r;
     try { r = await call({ t: 'load', url: location.href, title: document.title }); } catch (e) { if (!quiet) fail(e); return; }
+    if (pageKey() !== at) return; // the page navigated meanwhile; the reply belongs to the old URL
     clearAll();
     state.signedIn = !!r.signedIn; state.user = r.user || null;
     if (!r.signedIn) { if (!quiet) toast(r.stale ? 'Your Diigo session expired — sign in again' : 'Sign in to Diigo', 'warn', signInAction); return; }
@@ -197,9 +201,9 @@ import { nthAtRangeEnd } from './lib/anchor.js';
     }
   }
   new MutationObserver(debounce(() => { adopt(); relocateAll(); }, 700)).observe(document.documentElement, { childList: true, subtree: true, characterData: true });
-  let href = location.href.replace(/#.*$/, '');
+  let href = pageKey();
   const urlCheck = () => {
-    const now = location.href.replace(/#.*$/, '');
+    const now = pageKey();
     if (now === href) return;
     href = now; clearAll(); hideBubble();
     if (state.prefs.autoload) load(true);

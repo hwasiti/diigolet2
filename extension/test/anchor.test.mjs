@@ -34,6 +34,13 @@ test('a selection that ends in an element (whole paragraph) still counts its own
   assert.equal(nthAtRangeEnd(r, S, 'alphabeta'), 2);
 });
 
+test('a one-character text does not loop forever (occurrences() cannot advance on it)', () => {
+  const n1 = node('a a a');
+  const S = snapshotFromNodes([n1]);
+  assert.equal(nthAtRangeEnd(range([n1], n1, n1, 5), S, 'a'), 1);
+  assert.equal(nthAtRangeEnd(range([n1], n1, n1, 5), S, ''), 1);
+});
+
 test('text that cannot be found yields 1, like Diigo', () => {
   const n1 = node('hello');
   const S = snapshotFromNodes([n1]);

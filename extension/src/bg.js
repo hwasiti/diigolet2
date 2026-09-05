@@ -61,10 +61,6 @@ async function authChanged(auth) {
     // Bring the page the user was on back to the front once the sign-in tab did its job.
     const { signinFrom } = await session.get('signinFrom');
     if (signinFrom) { await session.remove('signinFrom'); try { await chrome.tabs.update(signinFrom, { active: true }); } catch { /* tab gone */ } }
-  } else {
-    const all = await session.get(null);
-    await session.remove(Object.keys(all).filter((k) => k.startsWith('tab:')));
-    for (const tab of await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] })) badge(tab.id, '');
   }
 }
 async function setIcon(signedIn) {
@@ -217,8 +213,20 @@ chrome.runtime.onMessage.addListener((m, sender, sendResponse) => {
 // ---- events ------------------------------------------------------------------------------------------------
 chrome.cookies.onChanged.addListener((info) => {
   if (!isLoginCookieChange(info)) return;
-  session.remove('auth').then(() => getAuth(true)).then(authChanged);
+  (async () => {
+    const { auth: before } = await session.get('auth');
+    await session.remove('auth');
+    const after = await getAuth(true);
+    // A different account (or none): forget every page state, they belong to the previous user.
+    if (!before || before.user !== after.user || !after.signedIn) await forgetPages();
+    await authChanged(after);
+  })().catch(() => {});
 });
+async function forgetPages() {
+  const all = await session.get(null);
+  await session.remove(Object.keys(all).filter((k) => k.startsWith('tab:')));
+  for (const tab of await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] })) badge(tab.id, '');
+}
 
 chrome.tabs.onRemoved.addListener((tabId) => { session.remove(key(tabId)); });
 chrome.tabs.onUpdated.addListener((tabId, info) => {
