@@ -2,7 +2,7 @@
 // page's own scripts and styles are left alone) and shows a small colour bubble on selections. All Diigo traffic
 // goes through the service worker; this file only knows the page's DOM and Diigo's text model
 // (src/bookmarklet/text.js: whitespace-free body text, `content` + `nth` anchoring).
-import { snapshot, describeRange, seek, toRange, stripWs, html2txt, occurrences } from '../../src/bookmarklet/text.js';
+import { snapshot, describeRange, seek, toRange, stripWs, html2txt } from '../../src/bookmarklet/text.js';
 import { isHighlightablePage } from './lib/auth.js';
 import { nthAtRangeEnd } from './lib/anchor.js';
 
@@ -45,8 +45,9 @@ import { nthAtRangeEnd } from './lib/anchor.js';
   function locate(a, S) {
     const txt = stripWs(html2txt(a.content));
     if (!txt) return null;
-    let pos = seek(S, txt, a.nth);
-    if (!pos && a.nth > 1) { const n = occurrences(txt, S.docTxt).n; if (n) pos = seek(S, txt, n); } // fewer occurrences than stored: take the last, as Diigo does
+    // Fewer occurrences than the stored nth means the page changed: the official client then paints the last
+    // occurrence, which is usually the wrong text; we report the highlight as not found instead.
+    const pos = seek(S, txt, a.nth);
     return pos ? toRange(pos) : null;
   }
 
