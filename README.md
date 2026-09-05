@@ -45,6 +45,25 @@ branch → `main`, folder `/docs`). `dist/bookmarklet.dev.js` is the bundle with
 injecting into pages during automated testing (`DL2_USER=<diigo username> npm run build` bakes a username too).
 `docs/test.html` is a playground page with repeated phrases for exercising the anchoring.
 
+## Testing on a real Android phone
+
+Enable USB debugging, plug the phone in, then forward Chrome's DevTools socket and drive it with the script in
+`tools/`:
+
+```
+adb shell cat /proc/net/unix | grep devtools_remote      # find Chrome's socket (other Chromium browsers have their own)
+adb forward tcp:9301 localabstract:chrome_devtools_remote_<pid>
+CDP_PORT=9301 node tools/phone.mjs tabs
+CDP_PORT=9301 node tools/phone.mjs inject <tab> dist/bookmarklet.dev.js
+CDP_PORT=9301 node tools/phone.mjs eval <tab> "JSON.stringify(window.__dl2.debug.state())"
+adb shell input tap <x> <y>                              # real touches (physical pixels); rects() gives CSS coordinates
+```
+
+Synthetic DevTools touch events do not trigger Android's long-press selection; use `adb shell input swipe x y x y 800`
+for a long press. Background tabs are frozen on Android and do not answer DevTools calls until brought to the
+front (`curl http://localhost:9301/json/activate/<tab>`). GitHub Pages caches files for ten minutes; helper URLs
+carry the build stamp so a new bookmarklet always fetches matching helper code.
+
 ## Layout
 
 ```
