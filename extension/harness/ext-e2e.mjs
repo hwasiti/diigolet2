@@ -54,6 +54,14 @@ try {
   const unescape = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
   check('stored content matches the selection', !!mine && unescape(mine.content) === selected, (mine && mine.content.slice(0, 80)) + ' | ' + selected.slice(0, 80));
 
+  // The popup, opened for this tab, must report the sign-in and the count
+  const popup = await browser.newPage();
+  await popup.goto(`chrome-extension://${extId}/popup.html?tab=${tabId}`, { waitUntil: 'load' });
+  await sleep(1200);
+  const popupText = (await popup.evaluate(() => document.body.innerText)).replace(/\s+/g, ' ');
+  check('popup shows the user and the count', /Signed in to Diigo as \w+/.test(popupText) && /1 highlight on this page/.test(popupText), popupText.slice(0, 160));
+  await popup.close();
+
   // Reload: the highlight must be found and painted again
   await page.reload({ waitUntil: 'load' });
   await sleep(3500);
