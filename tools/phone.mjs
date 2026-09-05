@@ -3,9 +3,11 @@
 //
 //   adb forward tcp:9222 localabstract:chrome_devtools_remote
 //   node tools/phone.mjs tabs
-//   node tools/phone.mjs inject <tab> dist/bookmarklet.dev.js       # run the bundle in the page (like a bookmarklet)
-//   node tools/phone.mjs eval <tab> "JSON.stringify(window.__dl2.debug.state())"
+//   node tools/phone.mjs inject <tab> dist/client.dev.js            # run the bundle in the page (like a bookmarklet)
+//   node tools/phone.mjs eval <tab> "document.title" [--gesture]     # evaluate an expression (--gesture = user activation)
+//   node tools/phone.mjs evalfile <tab> flow.js [--gesture]          # evaluate a script file (avoids shell quoting)
 //   node tools/phone.mjs tap <tab> <cssX> <cssY>                     # real touch tap (user gesture)
+//   node tools/phone.mjs press <tab> <cssX> <cssY> [ms]              # long-press (default 800 ms) to select a word
 //   node tools/phone.mjs penTap <tab>                                # tap the Diigolet pen (bottom-right)
 //   node tools/phone.mjs shot <tab> out.png                          # page screenshot (CSS viewport)
 //
@@ -72,9 +74,9 @@ async function evaluate(cdp, expression, gesture = false) {
   return r.result.value;
 }
 
-async function tap(cdp, x, y) {
+async function tap(cdp, x, y, ms = 60) {
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
-  await new Promise((r) => setTimeout(r, 60));
+  await new Promise((r) => setTimeout(r, ms));
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
 }
 
@@ -93,9 +95,18 @@ async function main() {
     } else if (cmd === 'eval') {
       const gesture = rest.includes('--gesture');
       console.log(await evaluate(cdp, rest.filter((a) => a !== '--gesture').join(' '), gesture));
+    } else if (cmd === 'evalfile') {
+      // Run a script file (avoids shell-quoting big expressions); --gesture grants user activation for open().
+      const gesture = rest.includes('--gesture');
+      const path = rest.find((a) => a !== '--gesture');
+      console.log(await evaluate(cdp, readFileSync(path, 'utf8'), gesture));
     } else if (cmd === 'tap') {
       await tap(cdp, Number(rest[0]), Number(rest[1]));
       console.log('tapped', rest[0], rest[1]);
+    } else if (cmd === 'press') {
+      // Long-press (default 800 ms): selects the word under the finger, like a real touch.
+      await tap(cdp, Number(rest[0]), Number(rest[1]), Number(rest[2] || 800));
+      console.log('pressed', rest[0], rest[1]);
     } else if (cmd === 'penTap') {
       const size = await evaluate(cdp, 'JSON.stringify({w: innerWidth, h: innerHeight})');
       const { w, h } = JSON.parse(size);

@@ -36,9 +36,10 @@ Diigo's website, apps and official extension, and highlights made elsewhere rend
   urlIds from its own Diigo replies. A hostile page embedding the helper can therefore only touch highlights on its
   own pages, which Diigo's public JSONP endpoint already allows any page to do. The helper stores nothing, so it
   also works under third-party storage partitioning.
-- **Not yet in the thin client.** Removing a highlight from the page (the earlier, larger build had it) was cut to
-  fit the 5,000 character limit; it will return through the helper's own window. Diigo answers "success" to deletes
-  it does not perform on some old bookmarks, so removal must verify by reloading.
+- **Removing a highlight.** Putting the caret inside a painted highlight (or selecting part of it) reveals an `✕`
+  button next to the pen; it sends the annotation id to the helper, which deletes it and verifies by reloading,
+  because Diigo answers "success" to deletes it does not perform on some old bookmarks. The client keeps each
+  highlight's id from the load/add replies so it can map the caret to the right annotation.
 
 ## What the pen and the status line mean
 
@@ -65,7 +66,7 @@ branch → `main`, folder `/docs`). Pages caches files for ten minutes, so helpe
 new bookmarklet always fetches matching helper code. `dist/client.dev.js` is the client with the helper origin from
 `DL2_HELPER` (default `http://localhost:8765`) baked in, for injecting into pages during testing. `docs/test.html`
 is a playground page with repeated phrases for exercising the anchoring. Running the bookmarklet a second time on a
-page hides or shows its UI.
+page reloads its highlights (useful after the page has changed).
 
 ## Testing on a real Android phone
 
@@ -77,12 +78,16 @@ adb shell cat /proc/net/unix | grep devtools_remote      # find Chrome's socket 
 adb forward tcp:9301 localabstract:chrome_devtools_remote_<pid>
 CDP_PORT=9301 node tools/phone.mjs tabs
 CDP_PORT=9301 node tools/phone.mjs inject <tab> dist/client.dev.js   # DL2_HELPER=https://... npm run build first
+CDP_PORT=9301 node tools/phone.mjs evalfile <tab> flow.js --gesture # run a script file; --gesture allows popups/open()
 CDP_PORT=9301 node tools/phone.mjs listen <tab> 20                  # print the tab's exceptions and console output
+CDP_PORT=9301 node tools/phone.mjs press <tab> <x> <y> [ms]         # long-press (default 800 ms) to select a word
 adb shell input tap <x> <y>                              # real touches (physical pixels)
 ```
 
-Synthetic DevTools touch events do not trigger Android's long-press selection; use `adb shell input swipe x y x y 800`
-for a long press. Background tabs are frozen on Android and do not answer DevTools calls until brought to the
+Synthetic DevTools touch events do not trigger Android's long-press selection; use `phone.mjs press` or
+`adb shell input swipe x y x y 800` for a long press. The one-shot popup path (save, delete on a frame-blocking
+site) calls `window.open`, which needs user activation, so drive those flows with `evalfile … --gesture`
+(`Runtime.evaluate` with `userGesture:true`); a plain `.click()` from `eval` is not enough. Background tabs are frozen on Android and do not answer DevTools calls until brought to the
 front (`curl http://localhost:9301/json/activate/<tab>`). Typing a `javascript:` URL into the address bar runs a
 Google search instead; the bookmark must be saved through Chrome's bookmark editor (paste into the address field)
 and launched by typing its name and tapping the starred suggestion.
