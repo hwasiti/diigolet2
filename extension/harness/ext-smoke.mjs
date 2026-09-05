@@ -27,9 +27,13 @@ try {
   const tabId = await sw.evaluate(() => chrome.tabs.query({ url: 'https://developer.mozilla.org/*' }).then((t) => t[0] && t[0].id));
   console.log('content status:', JSON.stringify(await sw.evaluate((id) => chrome.tabs.sendMessage(id, { t: 'status' }), tabId)));
   console.log('ui host present:', await page.evaluate(() => !!document.querySelector('dl2-ui')));
-  // Select a sentence and check the bubble appears (shadow root is closed, so measure through the host's size only)
-  await page.evaluate(() => { const p = document.querySelector('article p, main p, p'); const r = document.createRange(); r.selectNodeContents(p); getSelection().removeAllRanges(); getSelection().addRange(r); });
+  // Select a paragraph, then try to highlight while signed out: the bubble must appear and the attempt must end
+  // in a "sign in" toast without any call to Diigo.
+  await page.evaluate(() => { const p = [...document.querySelectorAll('article p, main p, p')].find((x) => x.innerText.trim().length > 40); const r = document.createRange(); r.selectNodeContents(p); getSelection().removeAllRanges(); getSelection().addRange(r); });
   await sleep(500);
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { t: 'command', name: 'highlight-selection' }), tabId);
+  await sleep(1500);
+  console.log('content status after signed-out highlight attempt:', JSON.stringify(await sw.evaluate((id) => chrome.tabs.sendMessage(id, { t: 'status' }), tabId)));
   console.log('page errors:', JSON.stringify(errors.slice(0, 5)));
 
   const popup = await browser.newPage();

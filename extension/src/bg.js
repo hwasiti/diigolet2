@@ -173,12 +173,14 @@ async function handle(m, sender) {
     }
     case 'add': {
       if (!isHighlightablePage(url)) throw new DiigoError('page', 'Not a web page');
-      if (typeof m.content !== 'string' || !m.content || m.content.length > 20000 || !Number.isInteger(m.nth)) throw new DiigoError('bad', 'Bad highlight');
+      if (typeof m.content !== 'string' || !m.content || m.content.length > 20000 || !Number.isInteger(m.nth) || m.nth < 1) throw new DiigoError('bad', 'Bad highlight');
+      if (!(await getAuth()).signedIn) throw new DiigoError('signin', 'Sign in to Diigo'); // nothing is sent to Diigo while signed out
       const st = await pageState(tabId, url, m.title);
       return addHighlight(tabId, st, m);
     }
     case 'del': {
-      if (typeof m.id !== 'string') throw new DiigoError('bad', 'Bad request');
+      if (typeof m.id !== 'string' || !/^[0-9a-f]{32}$/i.test(m.id)) throw new DiigoError('bad', 'Bad request');
+      if (!(await getAuth()).signedIn) throw new DiigoError('signin', 'Sign in to Diigo');
       const st = await pageState(tabId, url, m.title);
       return deleteHighlight(tabId, st, m.id);
     }

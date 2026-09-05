@@ -14,6 +14,8 @@ const log = (...a) => { const line = new Date().toISOString().slice(0, 19) + ' '
 const HOURS = Number(process.env.WAIT_HOURS || 10);
 
 const browser = await launch({ extensions: [EXT], headless: false, extraArgs: ['--window-size=1100,820'] });
+// Another script (a helper that types the credentials) may connect to this browser: puppeteer.connect({ browserWSEndpoint }).
+writeFileSync(path.join(OUT, 'ws-endpoint.txt'), browser.wsEndpoint());
 const extId = new URL((await browser.waitForTarget((t) => t.type() === 'service_worker' && t.url().includes('dist/bg.js'), { timeout: 15000 })).url()).host;
 const loginUser = () => swEval(browser, extId, () => chrome.cookies.get({ url: 'https://www.diigo.com/', name: 'diigoandlogincookie' }).then((c) => c ? c.value.split('-.-')[1] : null)).catch(() => null);
 
