@@ -29,6 +29,10 @@ function createApp(cfg) {
     url, title: document.title || url,
     user: store.get('user', '') || cfg.u || '',
     urlId: null, saved: false, signedIn: null,
+    // `known` is true only after Diigo itself told us whether this page is bookmarked. Re-saving an
+    // existing bookmark blind wipes its tags and description, so the first highlight is never sent
+    // through bm_saveBookmark until the state is known.
+    known: false,
     anns: new Map(),
   };
   const renderer = createRenderer();
@@ -66,7 +70,7 @@ function createApp(cfg) {
   function cacheWrite() {
     const anns = {};
     for (const a of ctx.anns.values()) anns[a.id] = slim(a);
-    store.set(cacheKey, { urlId: ctx.urlId, saved: ctx.saved, anns });
+    store.set(cacheKey, { urlId: ctx.urlId, saved: ctx.saved, known: ctx.known, anns });
   }
 
   function paintCached() {
@@ -74,6 +78,7 @@ function createApp(cfg) {
     if (!c) return;
     ctx.urlId = c.urlId || null;
     ctx.saved = !!c.saved;
+    ctx.known = !!c.known;
     fresh();
     for (const a of Object.values(c.anns || {})) place(a, a._pending || a._failed);
     ui.setCount(ctx.anns.size);
@@ -96,6 +101,7 @@ function createApp(cfg) {
       const res = resp.result;
       ctx.urlId = res.urlId || ctx.urlId;
       ctx.saved = !!res.saved;
+      ctx.known = true;
       if (res.bookmarkInfo && res.bookmarkInfo.title) ctx.title = res.bookmarkInfo.title;
       // Server view wins: forget cached copies that Diigo no longer has, keep unsaved local ones.
       for (const [id, a] of [...ctx.anns]) if (!a._pending && !a._failed) { renderer.unpaint(id); ctx.anns.delete(id); }
@@ -181,28 +187,38 @@ function createApp(cfg) {
 
   async function save(a, urlId) {
     const first = !ctx.saved;
+    if (first && !ctx.known) {
+      // Unknown state: do not risk bm_saveBookmark on an existing bookmark. Keep it pending until connected.
+      a._failed = true; a._pending = true;
+      cacheWrite();
+      ui.setStatus('Connect to Diigo to save this page’s first highlight', 'warn');
+      ui.toast('Tap the pen to connect; the highlight is kept and saved then');
+      return;
+    }
     const cmd = first ? 'bm_saveBookmark' : 'annotation_add';
     const payload = first ? payloads.saveWith(url, ctx.title, a, PRIVACY.PRIVATE) : payloads.add(urlId, a);
     if (transport.mode() === 'none') {
       if (!transport.navigate(jsonpUrl(cmd, payload, ctx.user, Date.now() % 1e6))) { markFailed(a, 'blocked'); return; }
-      a._pending = false; a._unconfirmed = true; ctx.saved = true;
+      a._pending = false; a._failed = false; a._unconfirmed = true; ctx.saved = true;
       renderer.setPending(a.id, false);
       cacheWrite();
       ui.setStatus('Sent to Diigo (unconfirmed)', 'warn');
       return;
     }
+    if (first) ctx.saved = true; // so a second quick highlight does not re-save the bookmark
     try {
       ui.setStatus('Saving…');
       const resp = await transport.call(cmd, payload, ctx.user);
       noteUser(resp);
       if (resp.code !== 1) throw Object.assign(new Error('rejected'), { code: resp.user === null ? 'signin' : 'rejected' });
-      ctx.saved = true;
+      ctx.saved = true; ctx.known = true;
       if (resp.result && resp.result.urlId) ctx.urlId = resp.result.urlId;
       a._pending = false; a._failed = false;
       renderer.setPending(a.id, false);
       cacheWrite();
       ui.setStatus('Saved · ' + summary(), 'ok');
     } catch (e) {
+      if (first) ctx.saved = false;
       markFailed(a, e.code || e.message);
     }
   }
@@ -211,7 +227,9 @@ function createApp(cfg) {
     a._failed = true; a._pending = true;
     cacheWrite();
     ui.setStatus('Save failed: ' + why, 'bad');
-    ui.toast(why === 'signin' ? 'Sign in to Diigo, then tap the pen to retry' : 'Save failed. Tap the pen to retry.');
+    ui.toast(why === 'signin'
+      ? 'Diigo does not see your login here. Sign in to diigo.com (or allow third-party cookies), then tap the pen.'
+      : 'Save failed. Tap the pen to retry.');
   }
 
   async function retryFailed() {
