@@ -36,7 +36,8 @@ async function refreshPage() {
 
 async function init() {
   $('version').textContent = 'v' + chrome.runtime.getManifest().version;
-  [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const forced = new URLSearchParams(location.search).get('tab'); // test harness: popup opened as a tab for another tab
+  tab = forced ? await chrome.tabs.get(Number(forced)) : (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
   try { renderAuth(await bg({ t: 'auth', refresh: true })); } catch (e) { $('auth-line').textContent = e.message; }
   await refreshPage();
 }

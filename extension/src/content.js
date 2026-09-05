@@ -231,5 +231,8 @@ import { nthAtRangeEnd } from './lib/anchor.js';
     }
   });
 
+  // Debug hook for the test harness (visible only in the extension's isolated world).
+  window.__dl2ext = { version: VERSION, status: () => ({ loaded: state.loaded, shown: state.shown, pen: state.pen, signedIn: state.signedIn, user: state.user, count: anns.size, bubble: bubble.classList.contains('on'), draft: !!draft, hit: !!hit, toast: toastEl.classList.contains('on') ? toastText.textContent : '' }) };
+
   call({ t: 'prefs' }).then((p) => { state.prefs = { ...state.prefs, ...p }; if (state.prefs.autoload) load(true); }).catch(() => {});
 })();
