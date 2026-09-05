@@ -11,8 +11,8 @@ const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 const browser = await launch({ profile: process.env.PROFILE ? path.join(HARNESS, process.env.PROFILE) : undefined, headless: !!process.env.HEADLESS });
 const swLog = [];
 const sw = (fn, ...args) => swEval(browser, OFFICIAL_ID, fn, ...args);
-const globalData = () => sw(() => ({ signedIn: GlobalData.signedIn, user: GlobalData.user }));
-const tabIdOf = (url) => sw((u) => chrome.tabs.query({ url: u.replace(/#.*$/, '') + '*' }).then((t) => t[0] && t[0].id), url);
+const globalData = () => sw(() => (typeof GlobalData === 'object' && GlobalData) ? { signedIn: GlobalData.signedIn, user: GlobalData.user } : 'GlobalData not initialised yet');
+const tabIdOf = (url) => sw((u) => chrome.tabs.query({ url: u.replace(/#.*$/, '') + '*' }).then((t) => t.length ? Math.max(...t.map((x) => x.id)) : undefined), url);
 // What the popup's "Annotate" button does: the worker sends `run` to the tab.
 const runCmd = (tabId, type) => sw((id, type) => new Promise((res) => { chrome.tabs.sendMessage(id, { name: 'run', details: { extensionID: chrome.runtime.id, version: chrome.runtime.getManifest().version, logLevel: 'never', userClick: true, type } }, (r) => res(chrome.runtime.lastError ? 'no reply (' + chrome.runtime.lastError.message + ')' : r)); }), tabId, type);
 

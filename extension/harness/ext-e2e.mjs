@@ -12,7 +12,7 @@ let failures = 0;
 const check = (name, ok, detail = '') => { log((ok ? 'PASS' : 'FAIL') + ' ' + name, detail); if (!ok) failures++; };
 const extId = new URL((await browser.waitForTarget((t) => t.type() === 'service_worker' && t.url().includes('dist/bg.js'), { timeout: 15000 })).url()).host;
 const sw = (fn, ...args) => swEval(browser, extId, fn, ...args);
-const tabIdOf = (url) => sw((u) => chrome.tabs.query({ url: u.replace(/#.*$/, '') + '*' }).then((t) => t[0] && t[0].id), url);
+const tabIdOf = (url) => sw((u) => chrome.tabs.query({ url: u.replace(/#.*$/, '') + '*' }).then((t) => t.length ? Math.max(...t.map((x) => x.id)) : undefined), url);
 const status = (tabId) => sw((id) => chrome.tabs.sendMessage(id, { t: 'status' }), tabId);
 const command = (tabId, name) => sw((id, n) => chrome.tabs.sendMessage(id, { t: 'command', name: n }), tabId, name);
 const painted = (page) => page.evaluate(() => { let n = 0; for (const [k, h] of CSS.highlights) if (k.startsWith('dl2-')) n += h.size; return n; });
@@ -50,7 +50,7 @@ try {
   check('one range painted', (await painted(page)) === 1);
   const after = await diigoAnns(PAGE);
   const mine = after.anns.find((a) => !before.anns.some((b) => b.id === a.id));
-  check('Diigo stores the highlight', !!mine, JSON.stringify(mine).slice(0, 200));
+  check('Diigo stores the highlight', !!mine, JSON.stringify(mine || after).slice(0, 200));
   const unescape = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
   check('stored content matches the selection', !!mine && unescape(mine.content) === selected, (mine && mine.content.slice(0, 80)) + ' | ' + selected.slice(0, 80));
 

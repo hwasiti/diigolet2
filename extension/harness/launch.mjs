@@ -18,6 +18,11 @@ export async function launch({ extensions = [OFFICIAL_DIR], headless = false, pr
     ...extraArgs,
   ];
   const browser = await puppeteer.launch({ headless, userDataDir: profile, args, defaultViewport: null, ignoreDefaultArgs: ['--disable-extensions'] });
+  // The persistent profile restores the previous run's tabs; close them so tab lookups by URL are unambiguous.
+  await sleep(300);
+  const pages = await browser.pages();
+  for (const p of pages.slice(1)) await p.close().catch(() => {});
+  if (pages[0] && pages[0].url() !== 'about:blank') await pages[0].goto('about:blank').catch(() => {});
   return browser;
 }
 
