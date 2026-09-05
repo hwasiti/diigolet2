@@ -2,7 +2,7 @@
 //  frame : hidden iframe of our helper page (postMessage RPC; needs frame-src to allow it)
 //  popup : the same helper page in a window opened on a user tap (postMessage RPC)
 //  navigation : fire-and-forget top-level GET to diigo.com (works everywhere, no confirmation)
-export function createTransport({ helper, token, onMode }) {
+export function createTransport({ helper, onMode }) {
   let mode = 'none';
   let frame = null, popup = null, seq = 0, readyResolve = null;
   const pending = new Map();
@@ -72,7 +72,7 @@ export function createTransport({ helper, token, onMode }) {
         reject(Object.assign(new Error('timeout'), { code: 'timeout' }));
       }, 20000);
       pending.set(id, { resolve, reject, timer });
-      win.postMessage({ t: 'dl2', v: 1, token, id, cmd, payload, user }, helper);
+      win.postMessage({ t: 'dl2', v: 1, id, cmd, payload, user }, helper);
     });
   }
 

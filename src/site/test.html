@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diigolet 2 playground</title>
+<style>
+  body { margin: 0; font: 18px/1.6 Georgia, serif; color: #222; background: #fff; }
+  main { max-width: 64ch; margin: 0 auto; padding: 32px 20px 120px; }
+  h1 { font-size: 30px; line-height: 1.15; }
+  h2 { font-size: 22px; margin-top: 36px; }
+  .aside { border-left: 3px solid #ddd; padding-left: 14px; color: #555; }
+  code { background: #f3f3f3; padding: 1px 4px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Diigolet 2 playground</h1>
+  <p>This page exists so the bookmarklet can be exercised without depending on someone else's site. Select any run of text, then tap a colour in the palette at the bottom right. The paragraphs below repeat a few phrases on purpose, because Diigo anchors a highlight by <em>which</em> occurrence of the text it is.</p>
+
+  <h2>First section</h2>
+  <p>The quick brown fox jumps over the lazy dog. This sentence appears more than once on this page, and each copy must be highlightable independently. A highlight that spans <strong>bold words</strong>, <a href="#">a link</a>, and plain text should still be found again after a reload.</p>
+  <p class="aside">Whitespace   between    words is irregular here,
+    with a line break in the middle of the paragraph, to check that anchoring ignores whitespace exactly the way Diigo does.</p>
+
+  <h2>Second section</h2>
+  <p>The quick brown fox jumps over the lazy dog. Here the same sentence appears a second time; highlighting it here must produce nth = 2, and Diigo's own tools must paint the second copy, not the first.</p>
+  <p>Special characters: ampersands &amp; angle brackets &lt;like these&gt; and “curly quotes” plus an em dash — all of which affect how Diigo computes the highlight id.</p>
+
+  <h2>Third section</h2>
+  <p>Short.</p>
+  <p>A final paragraph with enough words that a long selection across the previous heading and this paragraph can be tested, including the boundary where a heading ends and a paragraph begins.</p>
+</main>
+</body>
+</html>

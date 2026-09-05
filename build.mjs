@@ -29,9 +29,8 @@ if (!install.includes(marker)) throw new Error('install.js marker missing');
 writeFileSync('docs/install.js', install.replace(marker, JSON.stringify(code)));
 writeFileSync('docs/.nojekyll', '');
 
-// Developer build for automated tests: helper on localhost, fixed pairing token.
-export const DEV_TOKEN = 'devtoken0123456789abcdef01234567';
-const devCfg = { h: process.env.DL2_HELPER || 'http://localhost:8765', t: process.env.DL2_TOKEN || DEV_TOKEN, u: process.env.DL2_USER || '' };
+// Developer build for automated tests: helper on localhost.
+const devCfg = { h: process.env.DL2_HELPER || 'http://localhost:8765', u: process.env.DL2_USER || '' };
 writeFileSync('dist/bookmarklet.dev.js', code.replace('"%%DL2_CFG%%"', JSON.stringify(devCfg)));
 
 console.log(`bookmarklet ${code.length} bytes (${(code.length / 1024).toFixed(1)} KB) -> dist/bookmarklet.js, docs/`);

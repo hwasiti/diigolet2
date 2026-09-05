@@ -33,8 +33,6 @@
   <h1>Highlight any page, save it to Diigo</h1>
   <p>One bookmark that carries its own engine, so sites with strict security policies cannot block it. Works in Chrome and Firefox on desktop and on Android. <mark>Highlights land in your normal Diigo account</mark> and render in Diigo's own apps.</p>
 
-  <p id="paired-banner" class="banner" hidden>This browser is now paired. You can close this tab and use the bookmark.</p>
-
   <h2>1. Your Diigo username</h2>
   <label for="user">Username (as in diigo.com/user/…)</label>
   <input id="user" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. hayder78">
@@ -47,11 +45,6 @@
   <textarea id="bm-url" readonly spellcheck="false"></textarea>
   <p><button id="copy" type="button">Copy bookmarklet</button> <span class="note">Size: <span id="size">…</span></span></p>
 
-  <h2>3. Pair your other devices</h2>
-  <p>The bookmarklet saves through this page using a private code. This browser is paired automatically. On each other device, open this link once (send it to yourself):</p>
-  <p class="pair"><a id="pair-link" href="#">…</a></p>
-  <p class="note">Pairing code: <code id="token">…</code>. Anyone with this code and your logged-in browser could save highlights to your account, so do not post it publicly.</p>
-
   <h2>Using it on Android Chrome</h2>
   <ol>
     <li>Open the page you want to read, tap the address bar, type <code>dl2</code>, and tap the suggestion that shows the bookmark star. Opening it from the bookmarks menu does not work; Chrome loses the page.</li>
@@ -60,8 +53,8 @@
   </ol>
   <p class="note">If the pen is grey, this site blocks embedded frames; tap the pen once to open the helper in a tab, then switch back. If a save cannot be confirmed, the bookmarklet opens Diigo briefly to deliver it.</p>
 
-  <h2>Signing in</h2>
-  <p>You must be signed in to <a href="https://www.diigo.com/" rel="noopener">diigo.com</a> in the same browser. The bookmarklet never sees your password; it uses the login cookie your browser already has.</p>
+  <h2>Signing in and privacy</h2>
+  <p>You must be signed in to <a href="https://www.diigo.com/" rel="noopener">diigo.com</a> in the same browser. The bookmarklet never sees your password; it uses the login cookie your browser already has. Saves travel through a small helper page on this site that only relays requests for the page you are reading, and stores nothing.</p>
 </div>
 <script src="install.js"></script>
 </body>

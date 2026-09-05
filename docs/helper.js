@@ -1,27 +1,30 @@
 // Diigolet 2 helper: relays Diigo API calls for the bookmarklet running inside other sites.
-// It only answers messages carrying the pairing token stored in this browser, so a random page that
-// embeds this frame cannot drive the visitor's Diigo account. It talks to Diigo with JSONP, which
-// carries the visitor's own diigo.com cookies.
+//
+// Security model: the relay is origin-bound. A message is only honoured if the URL it concerns belongs to
+// the origin that sent the message (the page the bookmarklet runs in), and highlight writes are only
+// accepted for urlIds this helper has itself learned from that origin's loads or saves. A hostile page
+// embedding this helper can therefore only touch highlights on its own pages, which it could already do
+// by calling Diigo's public JSONP endpoint directly. Nothing is stored; that also keeps it working under
+// third-party storage partitioning. It talks to Diigo with JSONP, which carries the visitor's own
+// diigo.com cookies.
 (function () {
   const ALLOW = new Set(['bm_loadBookmark', 'annotation_add', 'annotation_delete', 'bm_saveBookmark']);
   const PV = 13, CV = '5.0b7', SERVER = 'https://www.diigo.com';
   let seq = 0;
   const pending = new Map();
+  const knownUrlIds = new Map(); // origin -> Set of urlIds seen in that origin's own responses
 
   window.diigolet = {
     callback(resp) {
-      const p = pending.get(String(resp && resp.transId));
+      const key = String(resp && resp.transId);
+      const p = pending.get(key);
       if (!p) return;
-      pending.delete(String(resp.transId));
+      pending.delete(key);
       clearTimeout(p.timer);
       p.script.remove();
       p.resolve(resp);
     },
   };
-
-  function token() {
-    try { return localStorage.getItem('dl2token') || ''; } catch { return ''; }
-  }
 
   function jsonp(cmd, payload, user) {
     return new Promise((resolve, reject) => {
@@ -36,6 +39,35 @@
     });
   }
 
+  function sameOrigin(url, origin) {
+    try { return new URL(url).origin === origin; } catch { return false; }
+  }
+
+  function allowed(m, origin) {
+    if (!/^https?:\/\//.test(origin)) return false;
+    const p = m.payload;
+    switch (m.cmd) {
+      case 'bm_loadBookmark':
+      case 'bm_saveBookmark':
+        return typeof p.url === 'string' && sameOrigin(p.url, origin);
+      case 'annotation_add':
+      case 'annotation_delete': {
+        const set = knownUrlIds.get(origin);
+        return !!(set && typeof p.urlId === 'string' && set.has(p.urlId));
+      }
+      default:
+        return false;
+    }
+  }
+
+  function learn(origin, resp) {
+    const id = resp && resp.result && resp.result.urlId;
+    if (!id) return;
+    let set = knownUrlIds.get(origin);
+    if (!set) knownUrlIds.set(origin, (set = new Set()));
+    set.add(id);
+  }
+
   const status = document.getElementById('status');
   const say = (t) => { if (status) status.textContent = t; };
 
@@ -43,12 +75,11 @@
     const m = ev.data;
     if (!m || m.t !== 'dl2' || !m.id || !ev.source) return;
     const reply = (r) => ev.source.postMessage(Object.assign({ t: 'dl2', id: m.id }, r), ev.origin);
-    const tk = token();
-    if (!tk) return reply({ ok: false, error: 'unpaired' });
-    if (typeof m.token !== 'string' || m.token !== tk) return reply({ ok: false, error: 'badtoken' });
     if (!ALLOW.has(m.cmd) || typeof m.payload !== 'object' || m.payload === null) return reply({ ok: false, error: 'badcmd' });
+    if (!allowed(m, ev.origin)) return reply({ ok: false, error: 'forbidden' });
     try {
       const resp = await jsonp(m.cmd, m.payload, typeof m.user === 'string' ? m.user.slice(0, 64) : '');
+      learn(ev.origin, resp);
       say(resp && resp.user ? 'Connected to Diigo as ' + resp.user : 'Diigo did not recognise a signed-in user');
       reply({ ok: true, resp });
     } catch (e) {
@@ -58,6 +89,6 @@
   });
 
   const owner = window.opener || (window.parent !== window ? window.parent : null);
-  if (owner) owner.postMessage({ t: 'dl2', ready: true, paired: !!token() }, '*');
-  say(token() ? 'Ready. Keep this tab open while highlighting.' : 'This browser is not paired yet. Open the install page to pair it.');
+  if (owner) owner.postMessage({ t: 'dl2', ready: true }, '*');
+  say('Ready. Keep this tab open while highlighting.');
 })();

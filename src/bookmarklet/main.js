@@ -9,9 +9,9 @@ import { store } from './store.js';
 import { createUi } from './ui.js';
 import { payloads, annotationId, jsonpUrl, urlIdFor, PRIVACY } from './diigo.js';
 
-// The install page replaces the placeholder string with {h: helperOrigin, t: pairingToken, u: username}.
+// The install page replaces the placeholder string with {h: helperOrigin, u: username}.
 const CFG = window.__dl2cfg || "%%DL2_CFG%%";
-const DEV_CFG = { h: 'http://localhost:8765', t: 'testtoken', u: '' };
+const DEV_CFG = { h: 'http://localhost:8765', u: '' };
 const MIN_CHARS = 5, MAX_CHARS = 2000, MAX_ENCODED = 3600;
 
 (function boot() {
@@ -37,7 +37,7 @@ function createApp(cfg) {
   };
   const renderer = createRenderer();
   const ui = createUi({ onColor: highlightSelection, onPen: onPenTap, onRemove: removeHighlight });
-  const transport = createTransport({ helper: cfg.h, token: cfg.t, onMode: (m) => ui.setMode(m) });
+  const transport = createTransport({ helper: cfg.h, onMode: (m) => ui.setMode(m) });
   let draft = null, draftTimer = 0, snap = null;
   const cacheKey = 'page:' + url;
 
@@ -121,7 +121,7 @@ function createApp(cfg) {
       else ui.setStatus(summary(), 'ok');
       retryFailed();
     } catch (e) {
-      ui.setStatus(e.code === 'unpaired' ? 'Not paired · tap pen' : 'Diigo unreachable: ' + (e.code || e.message), 'warn');
+      ui.setStatus('Diigo unreachable: ' + (e.code || e.message), 'warn');
     }
   }
 

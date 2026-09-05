@@ -19,8 +19,10 @@ Diigo's website, apps and official extension, and highlights made elsewhere rend
 - **Saving and loading.** A small helper page (`src/site/`) hosted on our own origin relays Diigo's JSONP API,
   reached first as a hidden iframe, then as a popup opened on a tap, and finally, when neither is possible, a
   fire-and-forget top-level navigation to diigo.com that works everywhere but cannot confirm.
-- **Pairing.** The helper only obeys messages that carry the pairing token stored in that browser, so a hostile
-  page embedding the helper cannot drive a visitor's Diigo account.
+- **Origin-bound relay.** The helper only honours requests about URLs on the origin that sent them, and only
+  writes highlights for urlIds it learned from that origin's own loads. A hostile page embedding the helper can
+  therefore only touch highlights on its own pages, which Diigo's public JSONP endpoint already allows any page
+  to do. The helper stores nothing, so it also works under third-party storage partitioning.
 
 ## Develop
 
@@ -32,9 +34,9 @@ npm run serve     # http://localhost:8765/ serves docs/
 ```
 
 `docs/` is the built static site and is committed so GitHub Pages can serve it (Settings → Pages → Deploy from a
-branch → `main`, folder `/docs`). `dist/bookmarklet.dev.js` is the bundle with a localhost helper and a fixed
-pairing token baked in, for injecting into pages during automated testing; pair the local helper once by opening
-`http://localhost:8765/#pair=devtoken0123456789abcdef01234567`.
+branch → `main`, folder `/docs`). `dist/bookmarklet.dev.js` is the bundle with a localhost helper baked in, for
+injecting into pages during automated testing (`DL2_USER=<diigo username> npm run build` bakes a username too).
+`docs/test.html` is a playground page with repeated phrases for exercising the anchoring.
 
 ## Layout
 
