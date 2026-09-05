@@ -89,6 +89,10 @@
   });
 
   const owner = window.opener || (window.parent !== window ? window.parent : null);
-  if (owner) owner.postMessage({ t: 'dl2', ready: true }, '*');
-  say('Ready. Keep this tab open while highlighting.');
+  if (owner) {
+    owner.postMessage({ t: 'dl2', ready: true }, '*');
+    say('Ready. Keep this tab open while highlighting.');
+  } else {
+    say('This window could not connect back to the page (the site isolates popups). You can close it; highlights on that site are sent to Diigo directly, without confirmation.');
+  }
 })();

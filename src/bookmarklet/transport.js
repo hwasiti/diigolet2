@@ -41,7 +41,7 @@ export function createTransport({ helper, onMode }) {
       st.position = 'fixed'; st.width = '0'; st.height = '0'; st.border = '0'; st.left = '-9999px'; st.top = '0';
       frame.src = helper + '/helper.html';
       document.documentElement.appendChild(frame);
-      const src = await waitReady(4000);
+      const src = await waitReady(6000);
       if (src !== frame.contentWindow) throw new Error('unexpected source');
       mode = 'frame';
     } catch {
@@ -58,7 +58,15 @@ export function createTransport({ helper, onMode }) {
     if (popup && !popup.closed && mode === 'popup') return mode;
     popup = window.open(helper + '/helper.html#popup', 'dl2helper', 'popup=yes,width=460,height=380');
     if (!popup) throw Object.assign(new Error('popup blocked'), { code: 'blocked' });
-    await waitReady(8000);
+    // A page served with Cross-Origin-Opener-Policy gets a severed handle: the popup can never answer.
+    if (popup.closed) { popup = null; throw Object.assign(new Error('opener isolated'), { code: 'coop' }); }
+    try {
+      await waitReady(8000);
+    } catch (e) {
+      try { popup.close(); } catch { /* ignore */ }
+      popup = null;
+      throw e;
+    }
     mode = 'popup';
     onMode(mode);
     return mode;

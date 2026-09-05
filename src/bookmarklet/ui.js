@@ -89,6 +89,7 @@ export function createUi(handlers) {
     toggle() { host.style.display = host.style.display === 'none' ? '' : 'none'; },
     contains(node) { return !!node && (host === node || host.contains(node)); },
     setStatus(text, kind) { status.textContent = text; status.className = 'status' + (kind ? ' ' + kind : ''); },
+    getStatus() { return status.textContent; },
     setMode(mode) { pen.className = 'pen ' + mode; },
     setCount(n) { count.textContent = String(n); count.classList.toggle('on', n > 0); },
     showPalette(on) { palette.classList.toggle('on', !!on); if (on) offerRemove(null); },

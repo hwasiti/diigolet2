@@ -263,7 +263,10 @@ function createApp(cfg) {
         await transport.openPopup();
         await load();
       } catch (e) {
-        ui.setStatus(e.code === 'blocked' ? 'Popup blocked; saves go out unconfirmed' : 'Helper unreachable', 'warn');
+        ui.setStatus(e.code === 'blocked' ? 'Popup blocked; saves go out unconfirmed'
+          : e.code === 'coop' ? 'This site isolates popups; saves go out unconfirmed'
+          : 'Helper unreachable; saves go out unconfirmed', 'warn');
+        ui.toast('Highlights are still sent to Diigo, but cannot be confirmed or re-loaded on this site.');
       }
       return;
     }
@@ -283,7 +286,8 @@ function createApp(cfg) {
       highlight: highlightSelection,
       remove: removeHighlight,
       reload: load,
-      state: () => ({ url: ctx.url, user: ctx.user, urlId: ctx.urlId, saved: ctx.saved, signedIn: ctx.signedIn, mode: transport.mode(), usesApi: renderer.usesApi(),
+      connect: onPenTap,
+      state: () => ({ url: ctx.url, user: ctx.user, urlId: ctx.urlId, saved: ctx.saved, signedIn: ctx.signedIn, mode: transport.mode(), usesApi: renderer.usesApi(), status: ui.getStatus(),
         anns: [...ctx.anns.values()].map((a) => ({ id: a.id, nth: a.extra && a.extra.nth, color: a.extra && a.extra.color, pending: !!a._pending, failed: !!a._failed, lost: !!a._lost, content: a.content.slice(0, 60) })) }),
     },
   };
