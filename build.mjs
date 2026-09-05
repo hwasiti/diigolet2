@@ -3,6 +3,9 @@ import { build } from 'esbuild';
 import { readFileSync, writeFileSync, mkdirSync, cpSync } from 'node:fs';
 
 const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+// Build stamp: GitHub Pages caches files for ten minutes, so every helper URL carries the stamp of the
+// build that produced it and a new bookmarklet always fetches matching helper code.
+const BUILD = Date.now().toString(36);
 
 const result = await build({
   entryPoints: ['src/bookmarklet/main.js'],
@@ -13,7 +16,7 @@ const result = await build({
   charset: 'utf8',
   legalComments: 'none',
   write: false,
-  define: { __VERSION__: JSON.stringify(pkg.version) },
+  define: { __VERSION__: JSON.stringify(pkg.version), __BUILD__: JSON.stringify(BUILD) },
 });
 const code = result.outputFiles[0].text.trim();
 if (!code.includes('"%%DL2_CFG%%"')) throw new Error('config placeholder was optimised away');
@@ -23,10 +26,13 @@ mkdirSync('dist', { recursive: true });
 mkdirSync('docs', { recursive: true });
 writeFileSync('dist/bookmarklet.js', code);
 cpSync('src/site', 'docs', { recursive: true });
+const stamp = (s) => s.replaceAll('%%DL2_BUILD%%', BUILD).replaceAll('%%DL2_VERSION%%', pkg.version);
 const install = readFileSync('src/site/install.js', 'utf8');
 const marker = "/*__BOOKMARKLET_CODE__*/''";
 if (!install.includes(marker)) throw new Error('install.js marker missing');
-writeFileSync('docs/install.js', install.replace(marker, JSON.stringify(code)));
+writeFileSync('docs/install.js', stamp(install.replace(marker, JSON.stringify(code))));
+writeFileSync('docs/index.html', stamp(readFileSync('src/site/index.html', 'utf8')));
+writeFileSync('docs/helper.html', stamp(readFileSync('src/site/helper.html', 'utf8')));
 writeFileSync('docs/.nojekyll', '');
 
 // Developer build for automated tests: helper on localhost.
@@ -34,4 +40,4 @@ const devCfg = { h: process.env.DL2_HELPER || 'http://localhost:8765', u: proces
 if (process.env.DL2_ONESHOT) devCfg.o = Number(process.env.DL2_ONESHOT); // 1 forces the phone path, 0 the desktop path
 writeFileSync('dist/bookmarklet.dev.js', code.replace('"%%DL2_CFG%%"', JSON.stringify(devCfg)));
 
-console.log(`bookmarklet ${code.length} bytes (${(code.length / 1024).toFixed(1)} KB) -> dist/bookmarklet.js, docs/`);
+console.log(`bookmarklet ${code.length} bytes (${(code.length / 1024).toFixed(1)} KB), build ${BUILD} -> dist/bookmarklet.js, docs/`);

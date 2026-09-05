@@ -10,6 +10,8 @@ export function createTransport({ helper, pageUrl, oneShot, onMode }) {
   const pending = new Map();
   // `helper` is a base URL that may carry a path (https://user.github.io/diigolet2); message origins never do.
   const origin = new URL(helper).origin;
+  // Stamped with the build so a new bookmarklet never talks to a cached, older helper.
+  const helperPage = helper + '/helper.html?v=' + __BUILD__;
   // Phones and tablets have no popup windows, only tabs. Chrome's "Desktop site" mode on Android spoofs a
   // Linux desktop UA (and a stylus can make hover/pointer media queries look like a desktop), so also treat a
   // multi-touch device that is not Windows, macOS or ChromeOS as a phone.
@@ -60,7 +62,7 @@ export function createTransport({ helper, pageUrl, oneShot, onMode }) {
       frame.tabIndex = -1;
       const st = frame.style;
       st.position = 'fixed'; st.width = '0'; st.height = '0'; st.border = '0'; st.left = '-9999px'; st.top = '0';
-      frame.src = helper + '/helper.html';
+      frame.src = helperPage;
       document.documentElement.appendChild(frame);
       const src = await waitReady(6000);
       if (src !== frame.contentWindow) throw new Error('unexpected source');
@@ -77,7 +79,7 @@ export function createTransport({ helper, pageUrl, oneShot, onMode }) {
   /** Must be called from a user gesture. Throws with code blocked | coop | timeout. */
   async function openPopup() {
     if (mode === 'popup' && popupLive()) return mode;
-    popup = window.open(helper + '/helper.html#popup', 'dl2helper', 'popup=yes,width=460,height=380');
+    popup = window.open(helperPage + '#popup', 'dl2helper', 'popup=yes,width=460,height=380');
     if (!popup) throw Object.assign(new Error('popup blocked'), { code: 'blocked' });
     // A page served with Cross-Origin-Opener-Policy gets a severed handle: the popup can never answer.
     if (popup.closed) { popup = null; throw Object.assign(new Error('opener isolated'), { code: 'coop' }); }

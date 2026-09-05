@@ -303,7 +303,7 @@ function createApp(cfg) {
   return {
     start,
     toggle: () => ui.toggle(),
-    version: __VERSION__,
+    version: __VERSION__ + '+' + __BUILD__,
     // Debug hooks for automated testing; not used by the UI.
     debug: {
       highlight: highlightSelection,
