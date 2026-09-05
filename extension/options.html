@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Diigolet 2 options</title>
+<style>
+  body { width: 380px; margin: 0; padding: 14px 16px; font: 13px/1.5 system-ui, sans-serif; color: #222; }
+  h1 { font-size: 15px; margin: 0 0 10px; }
+  label { display: block; margin: 8px 0; }
+  select { font: inherit; }
+  p.muted { color: #666; margin: 4px 0 12px 22px; }
+  #saved { color: #1b5e20; font-weight: 600; }
+</style>
+</head>
+<body>
+<h1>Diigolet 2</h1>
+<label><input type="checkbox" id="autoload"> Show my highlights automatically when a page loads</label>
+<p class="muted">Diigolet asks Diigo about every page you open while signed in, exactly like the official extension's "show annotations automatically". Turn this off if you prefer to load highlights only when you ask (popup, or Alt+Shift+D).</p>
+<label><input type="checkbox" id="privateDefault"> Save new bookmarks as private</label>
+<label>Highlight colour: <select id="color"><option>yellow</option><option>blue</option><option>green</option><option>pink</option></select></label>
+<p class="muted">Keyboard shortcuts can be changed at chrome://extensions/shortcuts.</p>
+<span id="saved"></span>
+<script src="dist/options.js"></script>
+</body>
+</html>

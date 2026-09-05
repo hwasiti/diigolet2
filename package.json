@@ -7,7 +7,9 @@
   "scripts": {
     "build": "node build.mjs",
     "test": "node --test test/*.test.mjs",
-    "serve": "node serve.mjs"
+    "serve": "node serve.mjs",
+    "build:ext": "node extension/build.mjs",
+    "test:ext": "node --test extension/test/*.test.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.25.0"

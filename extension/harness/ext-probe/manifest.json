@@ -1,0 +1,7 @@
+{
+  "manifest_version": 3,
+  "name": "CSP probe",
+  "version": "0.0.1",
+  "content_scripts": [{ "matches": ["http://*/*", "https://*/*"], "js": ["probe.js"], "run_at": "document_idle" }],
+  "web_accessible_resources": [{ "resources": ["dot.png"], "matches": ["<all_urls>"] }]
+}

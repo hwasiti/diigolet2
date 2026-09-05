@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Diigolet 2</title>
+<style>
+  body { width: 300px; margin: 0; font: 13px/1.4 system-ui, sans-serif; color: #222; background: #fff; }
+  header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #1f5fbf; color: #fff; }
+  header img { width: 20px; height: 20px; }
+  header b { flex: 1; font-size: 14px; }
+  header small { opacity: .8; }
+  section { padding: 10px 12px; border-bottom: 1px solid #eee; }
+  section:last-child { border-bottom: 0; }
+  .muted { color: #666; }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  button { font: inherit; padding: 5px 10px; border: 1px solid #bbb; border-radius: 6px; background: #f7f7f7; cursor: pointer; }
+  button:hover { background: #eee; }
+  button.primary { background: #1f5fbf; border-color: #1f5fbf; color: #fff; }
+  button.primary:hover { background: #174a94; }
+  button[disabled] { opacity: .5; cursor: default; }
+  a { color: #1f5fbf; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .status { font-weight: 600; }
+  .ok { color: #1b5e20; } .warn { color: #b26a00; } .err { color: #b71c1c; }
+  kbd { font: 11px monospace; padding: 1px 4px; border: 1px solid #ccc; border-radius: 3px; background: #fafafa; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header><img src="icons/icon-32.png" alt=""><b>Diigolet 2</b><small id="version"></small></header>
+
+<section id="auth">
+  <div id="auth-line" class="status muted">Checking sign-in…</div>
+  <div class="row">
+    <button id="signin" class="primary" hidden>Sign in to Diigo</button>
+    <button id="signout" hidden>Sign out</button>
+    <button id="library" hidden>Open my library</button>
+  </div>
+</section>
+
+<section id="page">
+  <div id="page-line" class="muted">This page…</div>
+  <div class="row" id="page-actions" hidden>
+    <button id="hl" class="primary">Highlight selection</button>
+    <button id="toggle">Hide highlights</button>
+    <button id="pen">Pen: off</button>
+    <button id="reload">Reload</button>
+  </div>
+  <div class="row" id="enable-row" hidden>
+    <button id="enable" class="primary">Enable on this page</button>
+    <span class="muted">This tab was open before Diigolet was installed.</span>
+  </div>
+</section>
+
+<section class="muted">
+  <div><kbd>Alt+Shift+H</kbd> highlight selection · <kbd>Alt+Shift+D</kbd> show/hide highlights</div>
+  <div style="margin-top:6px"><a href="#" id="options">Options</a> · <a href="https://www.diigo.com/" target="_blank">diigo.com</a></div>
+</section>
+<script src="dist/popup.js"></script>
+</body>
+</html>
