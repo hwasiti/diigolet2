@@ -43,7 +43,20 @@
     try { return new URL(url).origin === origin; } catch { return false; }
   }
 
-  function allowed(m, origin) {
+  function learn(origin, resp) {
+    const id = resp && resp.result && resp.result.urlId;
+    if (!id) return;
+    let set = knownUrlIds.get(origin);
+    if (!set) knownUrlIds.set(origin, (set = new Set()));
+    set.add(id);
+  }
+
+  function knows(origin, urlId) {
+    const set = knownUrlIds.get(origin);
+    return !!(set && typeof urlId === 'string' && set.has(urlId));
+  }
+
+  async function allowed(m, origin, user) {
     if (!/^https?:\/\//.test(origin)) return false;
     const p = m.payload;
     switch (m.cmd) {
@@ -52,20 +65,16 @@
         return typeof p.url === 'string' && sameOrigin(p.url, origin);
       case 'annotation_add':
       case 'annotation_delete': {
-        const set = knownUrlIds.get(origin);
-        return !!(set && typeof p.urlId === 'string' && set.has(p.urlId));
+        if (knows(origin, p.urlId)) return true;
+        // A fresh helper (phones open one per session) has learned nothing yet: ask Diigo which urlId the
+        // sender's own page URL maps to, and accept only if it matches the one being written.
+        if (typeof m.url !== 'string' || !sameOrigin(m.url, origin)) return false;
+        try { learn(origin, await jsonp('bm_loadBookmark', { url: m.url, what: 'bookmarkInfo' }, user)); } catch { return false; }
+        return knows(origin, p.urlId);
       }
       default:
         return false;
     }
-  }
-
-  function learn(origin, resp) {
-    const id = resp && resp.result && resp.result.urlId;
-    if (!id) return;
-    let set = knownUrlIds.get(origin);
-    if (!set) knownUrlIds.set(origin, (set = new Set()));
-    set.add(id);
   }
 
   const status = document.getElementById('status');
@@ -78,9 +87,10 @@
     if (!m.id) return;
     const reply = (r) => ev.source.postMessage(Object.assign({ t: 'dl2', id: m.id }, r), ev.origin);
     if (!ALLOW.has(m.cmd) || typeof m.payload !== 'object' || m.payload === null) return reply({ ok: false, error: 'badcmd' });
-    if (!allowed(m, ev.origin)) return reply({ ok: false, error: 'forbidden' });
+    const user = typeof m.user === 'string' ? m.user.slice(0, 64) : '';
+    if (!(await allowed(m, ev.origin, user))) return reply({ ok: false, error: 'forbidden' });
     try {
-      const resp = await jsonp(m.cmd, m.payload, typeof m.user === 'string' ? m.user.slice(0, 64) : '');
+      const resp = await jsonp(m.cmd, m.payload, user);
       learn(ev.origin, resp);
       say(resp && resp.user ? 'Connected to Diigo as ' + resp.user : 'Diigo did not recognise a signed-in user');
       reply({ ok: true, resp });

@@ -39,6 +39,7 @@ function createApp(cfg) {
   const ui = createUi({ onColor: highlightSelection, onPen: onPenTap, onRemove: removeHighlight });
   const transport = createTransport({
     helper: cfg.h,
+    pageUrl: url,
     oneShot: cfg.o === 1 ? true : cfg.o === 0 ? false : undefined,
     onMode: () => refreshPen(),
   });

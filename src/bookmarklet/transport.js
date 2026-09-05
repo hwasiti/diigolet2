@@ -4,7 +4,7 @@
 //            there are no popup windows, so it is a one-shot round trip: the helper tab opens, serves the
 //            session and closes itself, which drops the user back on the article automatically
 //  navigate: fire-and-forget top-level GET to diigo.com; works everywhere but cannot confirm or read
-export function createTransport({ helper, oneShot, onMode }) {
+export function createTransport({ helper, pageUrl, oneShot, onMode }) {
   let mode = 'none';
   let frame = null, popup = null, seq = 0, readyResolve = null;
   const pending = new Map();
@@ -112,7 +112,8 @@ export function createTransport({ helper, oneShot, onMode }) {
         reject(Object.assign(new Error('timeout'), { code: 'timeout' }));
       }, 20000);
       pending.set(id, { resolve, reject, timer });
-      win.postMessage({ t: 'dl2', v: 1, id, cmd, payload, user }, origin);
+      // `url` lets a fresh helper verify that the urlId being written belongs to this page.
+      win.postMessage({ t: 'dl2', v: 1, id, cmd, payload, user, url: pageUrl }, origin);
     });
   }
 
