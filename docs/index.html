@@ -29,37 +29,42 @@
 </head>
 <body>
 <div class="page">
-  <p class="note">Diigolet 2 · a self-contained Diigo highlighter</p>
+  <p class="note">Diigolet 2 · a Diigo highlighter that survives strict sites</p>
   <h1>Highlight any page, save it to Diigo</h1>
-  <p>One bookmark that carries its own engine, so sites with strict security policies cannot block it. Works in Chrome and Firefox on desktop and on Android. <mark>Highlights land in your normal Diigo account</mark> and render in Diigo's own apps.</p>
+  <p>One small bookmark that sites with strict security policies cannot block. Works in Chrome and Firefox on desktop and in Chrome on Android, where extensions do not exist. <mark>Highlights land in your normal Diigo account</mark> and render in Diigo's own website, apps and extension.</p>
 
-  <h2>1. Your Diigo username</h2>
-  <label for="user">Username (as in diigo.com/user/…)</label>
-  <input id="user" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. hayder78">
-
-  <h2>2. Your bookmarklet</h2>
+  <h2>Install</h2>
   <p><strong>Desktop:</strong> drag this button to your bookmarks bar.</p>
   <a id="bm-link" class="bm" href="#" draggable="true">Diigolet 2</a>
   <p id="drag-hint" class="note" hidden>Drag the button to the bookmarks bar rather than clicking it here.</p>
-  <p><strong>Phone:</strong> copy the text below, bookmark any page, then edit that bookmark: name it <code>dl2</code> and paste this as its address. Chrome syncs bookmarks between desktop and phone, so dragging it on desktop is enough if sync is on.</p>
+  <p><strong>Android Chrome:</strong> tap <em>Copy bookmarklet</em> below, bookmark any page (star in the menu), then edit that bookmark: name it <code>dl2</code> and paste the copied text as its address. Chrome Sync does not carry bookmarklets to phones reliably, so make the phone bookmark on the phone.</p>
   <textarea id="bm-url" readonly spellcheck="false"></textarea>
-  <p><button id="copy" type="button">Copy bookmarklet</button> <span class="note">Size: <span id="size">…</span></span></p>
+  <p><button id="copy" type="button">Copy bookmarklet</button> <span class="note">Size: <span id="size">…</span> (Android Chrome stores at most 5,000)</span></p>
 
-  <h2>Using it on Android Chrome</h2>
+  <h2>Using it</h2>
   <ol>
-    <li>Open the page you want to read, tap the address bar, type <code>dl2</code>, and tap the suggestion that shows the bookmark star. Opening it from the bookmarks menu does not work; Chrome loses the page.</li>
-    <li>A pen button appears at the bottom right. Select text with the normal handles; a colour palette appears.</li>
-    <li>Tap a colour. The highlight paints and saves. Tap an existing highlight and choose Remove to delete it.</li>
+    <li><strong>Android:</strong> on the page you want to read, tap the address bar, type <code>dl2</code> and tap the suggestion with the bookmark star. Opening it from the bookmarks list does not work; Chrome loses the page. <strong>Desktop:</strong> click the bookmark.</li>
+    <li>A pen appears at the bottom right and your existing highlights for the page paint themselves.</li>
+    <li>Select text; a colour palette appears next to the pen. Tap a colour to save the highlight.</li>
+    <li>To remove a highlight, use your Diigo library or Diigo's own tools for now; the bookmark is at Android's size limit, so removal moves into the helper window in a later version.</li>
   </ol>
-  <p class="note">If the pen is grey, this site blocks embedded frames. Tap the pen once: a helper tab opens, talks to Diigo and closes itself, dropping you back on the article. Each save then flashes that tab for a second. If a save cannot be confirmed at all, the bookmarklet opens Diigo briefly to deliver it.</p>
+
+  <h2>What the pen and the status mean</h2>
+  <ul>
+    <li><strong>Blue pen straight away:</strong> this site allows the hidden helper frame; saves are silent.</li>
+    <li><strong>Grey pen:</strong> this site blocks frames. Tap the pen once: on desktop a small helper window opens and stays; on a phone a helper tab opens, talks to Diigo and closes itself within a couple of seconds, dropping you back on the article. Each save then flashes that tab once.</li>
+    <li><strong>"Sign in to Diigo":</strong> the browser has no Diigo login. Sign in at diigo.com in this browser and tap the pen again.</li>
+    <li><strong>"Popups isolated"</strong> or <strong>"Popup blocked":</strong> the site blocks frames and severs or blocks popups, so no channel to Diigo could be opened on this page.</li>
+    <li><strong>"Helper unreachable":</strong> the helper page did not answer within a few seconds; check the connection and tap the pen again.</li>
+  </ul>
 
   <h2>Updating</h2>
-  <p>The bookmark contains the whole engine, so it does not update itself. When this page announces a new version, delete the old bookmark and drag or copy the new one again on each device.</p>
+  <p>The bookmark is only a thin client; all Diigo logic lives in a helper page on this site and updates itself. Re-install the bookmark only when this page says the bookmark itself changed.</p>
 
   <h2>Signing in and privacy</h2>
-  <p>You must be signed in to <a href="https://www.diigo.com/" rel="noopener">diigo.com</a> in the same browser. The bookmarklet never sees your password; it uses the login cookie your browser already has. Saves travel through a small helper page on this site that only relays requests for the page you are reading, and stores nothing.</p>
+  <p>You must be signed in to <a href="https://www.diigo.com/" rel="noopener">diigo.com</a> in the same browser. The bookmarklet never sees your password; it uses the login cookie your browser already has. Saves travel through the helper page on this site, which only relays requests for the page you are reading, sends Diigo the text you selected plus the page's text for matching, and stores nothing.</p>
 </div>
-<p class="note">Version 0.1.0 · build mto1prjt. If this page looks out of date after an update, reload it.</p>
-<script src="install.js?v=mto1prjt"></script>
+<p class="note">Version 0.2.0 · build mto3uvby. If this page looks out of date after an update, reload it.</p>
+<script src="install.js?v=mto3uvby"></script>
 </body>
 </html>

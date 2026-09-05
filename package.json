@@ -1,9 +1,9 @@
 {
   "name": "diigolet2",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "Self-contained Diigo highlighter bookmarklet that survives strict Content Security Policies and works on Android Chrome.",
+  "description": "Small Diigo highlighter bookmarklet (under Android Chrome's 5,000-character limit) that survives strict Content Security Policies; a helper page on our origin holds the Diigo logic.",
   "scripts": {
     "build": "node build.mjs",
     "test": "node --test test/*.test.mjs",

@@ -35,6 +35,7 @@ function connect(wsUrl) {
     const ws = new WebSocket(wsUrl);
     let seq = 0;
     const pending = new Map();
+    const listeners = [];
     const connectTimer = setTimeout(() => { reject(new Error(`connect timeout (${CONNECT_TIMEOUT} ms): is the tab frozen or the phone locked?`)); ws.close(); }, CONNECT_TIMEOUT);
     ws.addEventListener('message', (ev) => {
       const m = JSON.parse(ev.data);
@@ -43,6 +44,8 @@ function connect(wsUrl) {
         pending.delete(m.id);
         clearTimeout(p.timer);
         m.error ? p.reject(new Error(JSON.stringify(m.error))) : p.resolve(m.result);
+      } else if (m.method) {
+        for (const fn of listeners) fn(m);
       }
     });
     ws.addEventListener('open', () => {
@@ -55,6 +58,7 @@ function connect(wsUrl) {
           ws.send(JSON.stringify({ id, method, params }));
         }),
         close: () => ws.close(),
+        on: (fn) => listeners.push(fn),
       });
     });
     ws.addEventListener('close', () => { for (const p of pending.values()) { clearTimeout(p.timer); p.reject(new Error('websocket closed')); } pending.clear(); });
@@ -103,6 +107,23 @@ async function main() {
       console.log('saved', rest[0]);
     } else if (cmd === 'metrics') {
       console.log(JSON.stringify(await cdp.send('Page.getLayoutMetrics')));
+    } else if (cmd === 'listen') {
+      // Print exceptions and console output from the tab for N seconds (e.g. while a bookmark is tapped).
+      const seconds = Number(rest[0] || 15);
+      await cdp.send('Runtime.enable');
+      await cdp.send('Log.enable');
+      cdp.on((m) => {
+        if (m.method === 'Runtime.exceptionThrown') {
+          const d = m.params.exceptionDetails;
+          console.log('EXCEPTION', d.text, d.exception && d.exception.description, 'line', d.lineNumber, 'col', d.columnNumber, 'url', d.url);
+        } else if (m.method === 'Runtime.consoleAPICalled') {
+          console.log('CONSOLE', m.params.type, m.params.args.map((a) => a.value ?? a.description).join(' '));
+        } else if (m.method === 'Log.entryAdded') {
+          console.log('LOG', m.params.entry.level, m.params.entry.text.slice(0, 300));
+        }
+      });
+      console.log(`listening on ${tab.url.slice(0, 60)} for ${seconds}s`);
+      await new Promise((r) => setTimeout(r, seconds * 1000));
     } else {
       throw new Error('unknown command ' + cmd);
     }

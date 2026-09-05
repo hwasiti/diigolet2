@@ -136,7 +136,8 @@ export function html2txt(html) {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     return collectTextNodes(doc.body).map((n) => n.nodeValue).join('');
   } catch {
-    return html.replace(/<[^>]+>/g, '');
+    const ent = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+    return html.replace(/<[^>]+>/g, '').replace(/&(#x?[0-9a-f]+|\w+);/gi, (m, e) => e[0] === '#' ? String.fromCodePoint(parseInt(e.slice(1).replace(/^x/i, '0x'), e[1] === 'x' || e[1] === 'X' ? 16 : 10)) : ent[e.toLowerCase()] ?? m);
   }
 }
 
