@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diigolet 2</title>
+<style>
+  :root { --paper: #fbfbf7; --ink: #17203a; --ink-2: #4b5568; --rule: #dde0e6; --hl: #ffe86b; --accent: #1f5fbf; --code: #f1f2ec; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 17px/1.55 "Source Sans 3", "Segoe UI", system-ui, sans-serif; }
+  .page { max-width: 72ch; margin: 0 auto; padding: 36px 20px 80px; }
+  h1 { font-size: 40px; line-height: 1.05; margin: 0 0 10px; letter-spacing: -0.02em; }
+  h2 { font-size: 22px; margin: 40px 0 10px; }
+  p, li { max-width: 66ch; }
+  mark { background: var(--hl); padding: 0 .15em; border-radius: 2px; }
+  label { display: block; font-weight: 600; margin: 14px 0 6px; }
+  input[type=text] { font: inherit; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 6px; width: 100%; max-width: 32ch; }
+  .bm { display: inline-block; background: var(--accent); color: #fff; font-weight: 700; padding: 12px 18px; border-radius: 10px; text-decoration: none; margin: 8px 0; }
+  .bm:hover { filter: brightness(1.08); }
+  textarea { width: 100%; height: 110px; font: 12px/1.4 ui-monospace, Consolas, monospace; border: 1px solid var(--rule); border-radius: 6px; padding: 8px; background: var(--code); }
+  button { font: inherit; padding: 8px 14px; border: 1px solid var(--rule); border-radius: 8px; background: #fff; cursor: pointer; }
+  code { font-family: ui-monospace, Consolas, monospace; background: var(--code); padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+  .note { color: var(--ink-2); font-size: 15px; }
+  .banner { background: #e1f3e8; color: #1b7f4b; padding: 10px 14px; border-radius: 8px; font-weight: 600; }
+  ol li { margin-bottom: 8px; }
+  a { color: var(--accent); }
+  .pair { word-break: break-all; }
+</style>
+</head>
+<body>
+<div class="page">
+  <p class="note">Diigolet 2 · a self-contained Diigo highlighter</p>
+  <h1>Highlight any page, save it to Diigo</h1>
+  <p>One bookmark that carries its own engine, so sites with strict security policies cannot block it. Works in Chrome and Firefox on desktop and on Android. <mark>Highlights land in your normal Diigo account</mark> and render in Diigo's own apps.</p>
+
+  <p id="paired-banner" class="banner" hidden>This browser is now paired. You can close this tab and use the bookmark.</p>
+
+  <h2>1. Your Diigo username</h2>
+  <label for="user">Username (as in diigo.com/user/…)</label>
+  <input id="user" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. hayder78">
+
+  <h2>2. Your bookmarklet</h2>
+  <p><strong>Desktop:</strong> drag this button to your bookmarks bar.</p>
+  <a id="bm-link" class="bm" href="#" draggable="true">Diigolet 2</a>
+  <p id="drag-hint" class="note" hidden>Drag the button to the bookmarks bar rather than clicking it here.</p>
+  <p><strong>Phone:</strong> copy the text below, bookmark any page, then edit that bookmark: name it <code>dl2</code> and paste this as its address. Chrome syncs bookmarks between desktop and phone, so dragging it on desktop is enough if sync is on.</p>
+  <textarea id="bm-url" readonly spellcheck="false"></textarea>
+  <p><button id="copy" type="button">Copy bookmarklet</button> <span class="note">Size: <span id="size">…</span></span></p>
+
+  <h2>3. Pair your other devices</h2>
+  <p>The bookmarklet saves through this page using a private code. This browser is paired automatically. On each other device, open this link once (send it to yourself):</p>
+  <p class="pair"><a id="pair-link" href="#">…</a></p>
+  <p class="note">Pairing code: <code id="token">…</code>. Anyone with this code and your logged-in browser could save highlights to your account, so do not post it publicly.</p>
+
+  <h2>Using it on Android Chrome</h2>
+  <ol>
+    <li>Open the page you want to read, tap the address bar, type <code>dl2</code>, and tap the suggestion that shows the bookmark star. Opening it from the bookmarks menu does not work; Chrome loses the page.</li>
+    <li>A pen button appears at the bottom right. Select text with the normal handles; a colour palette appears.</li>
+    <li>Tap a colour. The highlight paints and saves. Tap an existing highlight and choose Remove to delete it.</li>
+  </ol>
+  <p class="note">If the pen is grey, this site blocks embedded frames; tap the pen once to open the helper in a tab, then switch back. If a save cannot be confirmed, the bookmarklet opens Diigo briefly to deliver it.</p>
+
+  <h2>Signing in</h2>
+  <p>You must be signed in to <a href="https://www.diigo.com/" rel="noopener">diigo.com</a> in the same browser. The bookmarklet never sees your password; it uses the login cookie your browser already has.</p>
+</div>
+<script src="install.js"></script>
+</body>
+</html>
